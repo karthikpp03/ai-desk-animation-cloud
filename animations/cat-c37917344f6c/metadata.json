@@ -1,0 +1,19 @@
+{
+  "id": "cat-c37917344f6c",
+  "name": "cat",
+  "originalFilename": "cat.ino",
+  "width": 128,
+  "height": 64,
+  "monochrome": true,
+  "bitsPerPixel": 1,
+  "bytesPerFrame": 1024,
+  "frames": 45,
+  "fps": 14.925,
+  "frameDurationMs": 67,
+  "loop": true,
+  "format": "raw-ssd1306-row-major-1bpp-v1",
+  "timingSource": "millis() interval",
+  "sourceSha256": "c37917344f6ce2dbf431da7b9bf95818fd4465435d37171ed044ea6db1445e8a",
+  "importedAt": "2026-10-04T14:12:59.982Z",
+  "parser": "deterministic"
+}
