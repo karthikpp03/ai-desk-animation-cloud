@@ -8,7 +8,7 @@ export const ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '
 export const ENV_PATH = path.join(ROOT, '.env');
 
 // Names whose values are secrets and must never be printed.
-export const SECRET_NAMES = new Set(['ADMIN_TOKEN', 'DEVICE_TOKEN', 'GITHUB_TOKEN', 'OPENAI_API_KEY', 'WIFI_PASSWORD']);
+export const SECRET_NAMES = new Set(['ADMIN_TOKEN', 'DEVICE_TOKEN', 'GITHUB_TOKEN', 'OPENAI_API_KEY', 'WIFI_PASSWORD', 'HOME_WIFI_PASSWORD', 'HOTSPOT_WIFI_PASSWORD']);
 
 export function parseEnv(text) {
   const out = {};

@@ -11,7 +11,7 @@
 // When true: no Wi-Fi is used at all. Clock, weather, quotes, reminders
 // and AI messages are all simulated so the character + screen system
 // can be fully tested with just the ESP32 + OLED + button + buzzer.
-// Flip to false once WIFI_SSID / WIFI_PASSWORD / API keys below are filled in.
+// Flip to false once the generated WiFi/API secrets and optional keys are configured.
 #define DEMO_MODE false
 
 // ---------------------------------------------------------------------
@@ -37,19 +37,34 @@
 // ---------------------------------------------------------------------
 // WI-FI
 // ---------------------------------------------------------------------
-// Preferred: fill WIFI_SSID / WIFI_PASSWORD in the cloud project's .env and run
-// `npm run gen:firmware` — that writes secrets.h next to this sketch and the values
-// below are picked up automatically. Otherwise, edit the placeholders here directly.
+// Credentials are generated into secrets.h from the cloud project's .env.
+// Home WiFi is always preferred; the mobile hotspot is used as fallback.
 #if __has_include("secrets.h")
 #include "secrets.h"
 #endif
-#ifdef SECRET_WIFI_SSID
-#define WIFI_SSID     SECRET_WIFI_SSID
-#define WIFI_PASSWORD SECRET_WIFI_PASSWORD
+#ifdef SECRET_HOME_WIFI_SSID
+#define HOME_WIFI_SSID     SECRET_HOME_WIFI_SSID
+#define HOME_WIFI_PASSWORD SECRET_HOME_WIFI_PASSWORD
 #else
-#define WIFI_SSID     "your-wifi-name"
-#define WIFI_PASSWORD "your-wifi-password"
+#define HOME_WIFI_SSID     ""
+#define HOME_WIFI_PASSWORD ""
 #endif
+#ifdef SECRET_HOTSPOT_WIFI_SSID
+#define HOTSPOT_WIFI_SSID     SECRET_HOTSPOT_WIFI_SSID
+#define HOTSPOT_WIFI_PASSWORD SECRET_HOTSPOT_WIFI_PASSWORD
+#else
+#define HOTSPOT_WIFI_SSID     ""
+#define HOTSPOT_WIFI_PASSWORD ""
+#endif
+
+// Backward-compatible aliases for modules that still reference the original
+// single-network names. New code should use HOME_WIFI_* / HOTSPOT_WIFI_*.
+#define WIFI_SSID     HOME_WIFI_SSID
+#define WIFI_PASSWORD HOME_WIFI_PASSWORD
+
+#define WIFI_CONNECT_TIMEOUT_MS       10000UL
+#define WIFI_RECONNECT_INTERVAL_MS   5000UL
+#define WIFI_HOME_RETRY_INTERVAL_MS  60000UL
 
 // ---------------------------------------------------------------------
 // WEATHER (OpenWeatherMap-style REST API)

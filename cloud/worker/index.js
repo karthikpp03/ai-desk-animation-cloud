@@ -7,13 +7,14 @@ const MAX_UPLOAD = 2 * 1024 * 1024;
 const MAX_CONVERTED = 8 * 1024 * 1024;
 const MAX_FRAMES = 600;
 const JSON_HEADERS = { 'Content-Type': 'application/json; charset=utf-8' };
-const DEFAULT_STATE = { command: 'stop', animationId: null, slideshow: false, updatedAt: 0, currentAnimationId: null, deviceOnline: false, lastSeenAt: 0, mode: 'unknown', requestedMode: null, modeRequestId: 0 };
+const DEFAULT_STATE = { command: 'stop', animationId: null, slideshow: false, updatedAt: 0, currentAnimationId: null, deviceOnline: false, lastSeenAt: 0, mode: 'unknown', requestedMode: null, modeRequestId: 0, localIp: '', drawPad: { active: false, clients: 0, eventId: 0, event: '' } };
 // Online/offline: the ESP32 sends a heartbeat every few seconds, but device/state.json lives in GitHub (one commit per
 // write), so lastSeenAt is only persisted when it is older than HEARTBEAT_PERSIST_MS (or the mode/animation changed).
 // ONLINE_WINDOW_MS must stay comfortably larger than HEARTBEAT_PERSIST_MS so one missed write never shows "offline".
 const HEARTBEAT_PERSIST_MS = 40000;
 const ONLINE_WINDOW_MS = 100000;
 const DEVICE_MODES = ['normal', 'animation'];
+const HEARTBEAT_MODES = ['normal', 'animation', 'draw_pad'];
 
 function json(data, status = 200, extra = {}) { return new Response(JSON.stringify(data), { status, headers: { ...JSON_HEADERS, ...extra } }); }
 function cors(request, response) {
@@ -164,15 +165,23 @@ async function deviceCommand(request, env) {
   return json(await readState(env), 200, { 'Cache-Control': 'no-store' });
 }
 // Shared by /api/device/ack (animation mode) and /api/device/heartbeat (any mode).
-async function recordSeen(env, { mode, animationId = null }) {
+async function recordSeen(env, { mode, animationId = null, localIp = '', drawPad = null }) {
   const before = await readState(env);
   const now = Date.now();
   const requestedAnimation = typeof animationId === 'string' && animationId ? animationId : before.currentAnimationId || null;
-  const unchanged = before.currentAnimationId === requestedAnimation && (before.mode || 'unknown') === mode;
+  const normalizedIp = typeof localIp === 'string' && localIp ? localIp.slice(0, 64) : (before.localIp || '');
+  const normalizedDrawPad = drawPad && typeof drawPad === 'object' ? {
+    active: !!drawPad.active,
+    clients: Math.max(0, Math.min(255, Number(drawPad.clients || 0))),
+    eventId: Math.max(0, Number(drawPad.eventId || 0)),
+    event: typeof drawPad.event === 'string' ? drawPad.event.slice(0, 32) : ''
+  } : (before.drawPad || DEFAULT_STATE.drawPad);
+  const unchanged = before.currentAnimationId === requestedAnimation && (before.mode || 'unknown') === mode &&
+    (before.localIp || '') === normalizedIp && JSON.stringify(before.drawPad || DEFAULT_STATE.drawPad) === JSON.stringify(normalizedDrawPad);
   if (unchanged && (now - Number(before.lastSeenAt || 0)) < HEARTBEAT_PERSIST_MS) {
     return { persisted: false, state: before };
   }
-  await updateJson(env, DEVICE_STATE, current => ({ ...DEFAULT_STATE, ...current, currentAnimationId: requestedAnimation, mode, deviceOnline: true, lastSeenAt: now }), 'Update device heartbeat');
+  await updateJson(env, DEVICE_STATE, current => ({ ...DEFAULT_STATE, ...current, currentAnimationId: requestedAnimation, mode, localIp: normalizedIp, drawPad: normalizedDrawPad, deviceOnline: true, lastSeenAt: now }), 'Update device heartbeat');
   return { persisted: true, state: before };
 }
 async function deviceAck(request, env) {
@@ -184,8 +193,8 @@ async function deviceAck(request, env) {
 async function deviceHeartbeat(request, env) {
   if (!(await requireDevice(request, env))) return json({ error: 'Unauthorized' }, 401);
   const body = await request.json().catch(() => ({}));
-  if (!DEVICE_MODES.includes(body.mode)) return json({ error: 'mode must be "normal" or "animation".' }, 400);
-  const { persisted, state } = await recordSeen(env, { mode: body.mode, animationId: body.animationId });
+  if (!HEARTBEAT_MODES.includes(body.mode)) return json({ error: 'invalid heartbeat mode.' }, 400);
+  const { persisted, state } = await recordSeen(env, { mode: body.mode, animationId: body.animationId, localIp: body.localIp, drawPad: body.drawPad });
   return json({ success: true, persisted, requestedMode: state.requestedMode || null, modeRequestId: Number(state.modeRequestId || 0) }, 200, { 'Cache-Control': 'no-store' });
 }
 // Website "Mode Change" button: records a one-shot request that the ESP32 picks up on its next heartbeat/command poll.
@@ -263,7 +272,7 @@ export default {
       if (url.pathname === '/api/device/status' && request.method === 'GET') {
         const state = await readState(env);
         const online = Date.now() - Number(state.lastSeenAt || 0) < ONLINE_WINDOW_MS;
-        return cors(request, json({ online, lastSeenAt: state.lastSeenAt || 0, serverTime: Date.now(), mode: online ? (state.mode || 'unknown') : 'unknown', requestedMode: state.requestedMode || null, modeRequestId: Number(state.modeRequestId || 0), command: state.command, animationId: state.animationId, currentAnimationId: state.currentAnimationId, slideshow: !!state.slideshow }, 200, { 'Cache-Control': 'no-store' }));
+        return cors(request, json({ online, lastSeenAt: state.lastSeenAt || 0, serverTime: Date.now(), mode: online ? (state.mode || 'unknown') : 'unknown', localIp: online ? (state.localIp || '') : '', drawPad: online ? (state.drawPad || DEFAULT_STATE.drawPad) : DEFAULT_STATE.drawPad, requestedMode: state.requestedMode || null, modeRequestId: Number(state.modeRequestId || 0), command: state.command, animationId: state.animationId, currentAnimationId: state.currentAnimationId, slideshow: !!state.slideshow }, 200, { 'Cache-Control': 'no-store' }));
       }
       if (url.pathname === '/api/device/ack' && request.method === 'POST') return cors(request, await deviceAck(request, env));
       if (url.pathname === '/api/device/heartbeat' && request.method === 'POST') return cors(request, await deviceHeartbeat(request, env));

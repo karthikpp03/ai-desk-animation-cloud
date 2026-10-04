@@ -32,6 +32,7 @@
 #include "MotionManager.h"
 #include "ScreenManager.h"
 #include "CloudAnimation.h"
+#include "DrawPadManager.h"
 
 Adafruit_SSD1306 display(SCREEN_WIDTH, SCREEN_HEIGHT, &Wire, OLED_RESET_PIN);
 
@@ -50,6 +51,8 @@ MotionManager    motionMgr(animation, buzzer, ledMgr, earMgr); // V5
 ScreenManager    screenMgr(display, character, animation, buzzer,
                             wifiMgr, clockMgr, weatherMgr, aiMgr, reminderMgr, ledMgr, earMgr, motionMgr);
 CloudAnimationPlayer cloudAnim; // Animation Display Mode — see CloudAnimation.h
+DrawPadManager drawPad(display, wifiMgr);
+static bool restoreAnimationAfterDrawPad = false;
 
 // ---------------------------------------------------------------------
 // Boot animation — a short, non-blocking-per-frame "waking up" sequence
@@ -136,6 +139,29 @@ static void toggleAnimationMode() {
   }
 }
 
+static void processDrawPadModeRequest() {
+  const int8_t request = drawPad.takeModeRequest();
+  if (request == 1 && !drawPad.isActive()) {
+    // Draw Pad owns the OLED. Pause cloud animation playback first, then suspend
+    // normal screen rendering so only DrawPadManager can update the panel.
+    restoreAnimationAfterDrawPad = cloudAnim.isActive();
+    if (restoreAnimationAfterDrawPad) cloudAnim.stop();
+    screenMgr.setSuspended(true);
+    drawPad.activate();
+    animation.notifyInteraction();
+  } else if (request == 0 && drawPad.isActive()) {
+    drawPad.deactivate();
+    if (restoreAnimationAfterDrawPad) {
+      screenMgr.setSuspended(true);
+      cloudAnim.start();
+    } else {
+      screenMgr.setSuspended(false);
+    }
+    restoreAnimationAfterDrawPad = false;
+    animation.notifyInteraction();
+  }
+}
+
 void setup() {
   Serial.begin(115200);
 
@@ -163,6 +189,7 @@ void setup() {
   earMgr.begin(); // V3 — safe to call even if the ear servos aren't physically wired up
   motionMgr.begin(); // V5 — safe failure path if MPU6050 is absent
   cloudAnim.begin(display); // Animation Display Mode — cheap; network task starts on first use
+  drawPad.begin(); // local 128x64 web drawing pad; server uses whichever WiFi is active
 
   playBootAnimation();
 
@@ -172,8 +199,13 @@ void setup() {
 void loop() {
   // ---- Input ----
   ButtonEvent event = button.update();
+
+  drawPad.update();
+  processDrawPadModeRequest();
+  cloudAnim.setDrawPadStatus(drawPad.isActive(), drawPad.clientCount(), drawPad.eventId(), drawPad.lastEvent());
+
 #if ENABLE_ANIMATION_MODE
-  if (event == ButtonEvent::QUADRUPLE_PRESS) {
+  if (event == ButtonEvent::QUADRUPLE_PRESS && !drawPad.isActive()) {
     toggleAnimationMode();
     event = ButtonEvent::NONE;
   } else if (cloudAnim.isActive() &&
@@ -186,13 +218,14 @@ void loop() {
 #if ENABLE_ANIMATION_MODE
   // Website "Mode Change" button (arrives via the cloud network task; same switch as 4 quick presses).
   const int8_t webModeRequest = cloudAnim.takeModeRequest();
-  if ((webModeRequest == 1 && !cloudAnim.isActive()) || (webModeRequest == 0 && cloudAnim.isActive())) {
+  if (!drawPad.isActive() &&
+      ((webModeRequest == 1 && !cloudAnim.isActive()) || (webModeRequest == 0 && cloudAnim.isActive()))) {
     toggleAnimationMode();
   }
 #endif
-  if (event == ButtonEvent::SHORT_PRESS) {
+  if (!drawPad.isActive() && event == ButtonEvent::SHORT_PRESS) {
     screenMgr.handleShortPress();
-  } else if (event == ButtonEvent::LONG_PRESS) {
+  } else if (!drawPad.isActive() && event == ButtonEvent::LONG_PRESS) {
     screenMgr.handleLongPress();
   } else if (event == ButtonEvent::DOUBLE_PRESS) {
     screenMgr.handleDoublePress(); // V2: LED Mode ON/OFF

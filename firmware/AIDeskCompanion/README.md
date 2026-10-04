@@ -1539,7 +1539,15 @@ Used by `EarManager` to drive the two SG90 servos.
 
 ### ArduinoJson
 
-Used for live weather and AI JSON parsing.
+Used for live weather, AI JSON parsing, and the existing cloud animation client.
+
+### AsyncTCP
+
+Used by the local Drawing Pad WebSocket server on ESP32.
+
+### ESPAsyncWebServer
+
+Provides the lightweight local Drawing Pad web page and WebSocket endpoint.
 
 The ESP32 Arduino core itself provides the Wi-Fi, Wire/I²C, time and HTTP/TLS support used by the project.
 
@@ -1589,16 +1597,26 @@ Install:
 - Adafruit SSD1306
 - ESP32Servo
 - ArduinoJson
+- AsyncTCP
+- ESPAsyncWebServer
 
-## 7. Configure `Config.h`
+## 7. Configure Wi-Fi and secrets
 
-Before live operation, configure:
+Keep credentials in `cloud/.env` and generate the ignored firmware secrets with:
 
-- Wi-Fi
-- weather API key
-- AI API key
-- location
-- any servo calibration values
+```bash
+cd cloud
+npm run gen:firmware
+```
+
+Set these four values in `.env`:
+
+- `HOME_WIFI_SSID`
+- `HOME_WIFI_PASSWORD`
+- `HOTSPOT_WIFI_SSID`
+- `HOTSPOT_WIFI_PASSWORD`
+
+Home Wi-Fi is tried first and the mobile hotspot is used automatically if the home network cannot connect.
 
 ## 8. Compile
 

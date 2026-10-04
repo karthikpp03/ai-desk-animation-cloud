@@ -28,4 +28,8 @@ public:
   // Mode Change button on the website: -1 = nothing pending, 1 = enter Animation Display Mode,
   // 0 = leave it. One-shot (cleared when read). The caller (loop(), core 1) performs the switch.
   int8_t takeModeRequest();
+
+  // Draw Pad is a separate local display owner, but the existing cloud heartbeat
+  // remains the single source of online/network status for the website.
+  void setDrawPadStatus(bool active, uint8_t clients, uint32_t eventId, const char *eventName);
 };

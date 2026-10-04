@@ -58,6 +58,10 @@ volatile bool slideshowAdvance = false;   // loop() -> network task: one full lo
 volatile bool slideshowMode = false;      // network task -> loop()
 volatile bool playbackFailed = false;     // loop() -> network task: cache unreadable, reload it
 volatile int8_t modeRequest = -1;         // network task -> loop(): website Mode Change (-1 none, 1 enter, 0 leave)
+volatile bool drawPadActive = false;
+volatile uint8_t drawPadClients = 0;
+volatile uint32_t drawPadEventId = 0;
+char drawPadEventName[32] = "";
 
 // ---- Owned by the network task -------------------------------------------------------------
 String currentAnimationId;
@@ -142,7 +146,16 @@ bool sendHeartbeat(const char* mode) {
   http.begin(String(API_BASE) + "/api/device/heartbeat");
   http.addHeader("Content-Type", "application/json");
   http.addHeader("X-Device-Token", DEVICE_TOKEN);
-  int code = http.POST(String("{\"mode\":\"") + mode + "\"}");
+  const char* reportedMode = drawPadActive ? "draw_pad" : mode;
+  String body = String("{\"mode\":\"") + String(reportedMode) +
+                "\",\"localIp\":\"" + WiFi.localIP().toString() +
+                "\",\"drawPad\":{" +
+                "\"active\":" + String(drawPadActive ? "true" : "false") +
+                ",\"clients\":" + String(drawPadClients) +
+                ",\"eventId\":" + String(drawPadEventId) +
+                ",\"event\":\"" + String(drawPadEventName) + "\"}" +
+                "}";
+  int code = http.POST(body);
   bool ok = code >= 200 && code < 300;
   if (ok) {
     JsonDocument doc;
@@ -560,6 +573,14 @@ int8_t CloudAnimationPlayer::takeModeRequest() {
   int8_t r = modeRequest;
   if (r >= 0) modeRequest = -1;
   return r;
+}
+
+void CloudAnimationPlayer::setDrawPadStatus(bool active, uint8_t clients, uint32_t eventId, const char *eventName) {
+  drawPadActive = active;
+  drawPadClients = clients;
+  drawPadEventId = eventId;
+  strncpy(drawPadEventName, eventName ? eventName : "", sizeof(drawPadEventName) - 1);
+  drawPadEventName[sizeof(drawPadEventName) - 1] = '\0';
 }
 
 void CloudAnimationPlayer::start() {

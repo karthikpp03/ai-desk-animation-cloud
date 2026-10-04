@@ -14,9 +14,18 @@ public:
 
   bool isConnected() const;
   bool isConnecting() const { return connecting; }
+  String localIP() const;
+  String currentSSID() const;
+  uint8_t currentNetwork() const { return activeNetwork; }
 
 private:
   bool connecting;
   unsigned long connectStartTime;
   unsigned long lastAttemptTime;
+  unsigned long lastHomeProbeTime;
+  uint8_t activeNetwork;
+  uint8_t attemptNetwork;
+
+  void beginAttempt(uint8_t network, unsigned long now);
+  void startHomeAttempt(unsigned long now);
 };

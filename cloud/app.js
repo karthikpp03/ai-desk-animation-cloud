@@ -20,7 +20,10 @@ function redact(text) {
     .slice(0, 240);
 }
 function log(text, level = 'info') {
-  logs.unshift({ t: Date.now(), level, text: redact(text) });
+  const clean = redact(text);
+  const now = Date.now();
+  if (logs[0] && logs[0].text === clean && logs[0].level === level && now - logs[0].t < 5000) return;
+  logs.unshift({ t: now, level, text: clean });
   logs.length = Math.min(logs.length, LOG_MAX);
   try { localStorage.setItem(LOG_KEY, JSON.stringify(logs)); } catch {}
   renderLogs();
@@ -57,9 +60,12 @@ async function api(path, options = {}) {
 }
 // Human-readable text for a failed request (never includes request headers or tokens).
 function describe(err) {
-  if (err.kind === 'github') return `GitHub storage error: ${err.message}`;
-  if (err.kind === 'worker') return `Worker error (HTTP ${err.status}): ${err.message}`;
-  return err.message;
+  if (err.status === 401 || /unauthorized/i.test(err.message || '')) return 'permission problem';
+  if (err.status === 404 || /not found/i.test(err.message || '')) return 'the requested item was not found';
+  if (err.kind === 'github') return 'GitHub storage is unavailable';
+  if (err.kind === 'worker') return 'the cloud service is unavailable';
+  if (err.kind === 'network') return 'the cloud service could not be reached';
+  return String(err.message || 'unknown error').slice(0, 180);
 }
 function msg(text, bad = false) { $('message').textContent = text; $('message').style.color = bad ? '#ef8d8d' : ''; }
 function fail(prefix, err) { msg(err.message, true); log(`${prefix}: ${describe(err)}`, 'error'); }
@@ -119,7 +125,7 @@ function setupPreview(card, a) {
     } catch (e) {
       anim.started = false;
       box.insertAdjacentHTML('beforeend', '<div class="preview-note">Preview unavailable</div>');
-      log(`Preview failed for ${a.name}: ${describe(e)}`, 'warn');
+      log(`Preview unavailable for '${a.name}' — ${/unexpected frame data size/i.test(e.message || '') ? 'animation data is incomplete' : 'the preview could not be loaded'}`, 'warn');
     }
   };
   observer.observe(card);
@@ -177,7 +183,7 @@ async function play(id, name) {
   try {
     await api(`/api/animations/${encodeURIComponent(id)}/play`, { method: 'POST' });
     msg(`Play command sent: ${name}`);
-    log(`Animation playback started (command sent): ${name}`);
+    log(`Playing animation: ${name}`);
   } catch (e) { fail(`Could not start ${name}`, e); }
 }
 async function failures() {
@@ -188,14 +194,14 @@ async function failures() {
 }
 
 /* ---------------------------------------------------------- device status */
-const MODE_LABEL = { normal: 'Normal', animation: 'Animation Display', unknown: '—' };
+const MODE_LABEL = { normal: 'Normal', animation: 'Animation Display', draw_pad: 'Draw Pad', unknown: '—' };
 const POLL_MS = 10000;      // normal status poll
 const POLL_FAST_MS = 2000;  // while waiting for a mode change to be confirmed
 const MODE_CONFIRM_MS = 25000;
 let statusTimer = 0;
 let statusFails = 0;
 let lastStatus = null;
-let prev = null;            // { online, mode, anim } for transition logging
+let prev = null;            // { online, mode, anim, drawPadEventId } for transition logging
 let pendingMode = null;     // { target, at }
 
 function renderStatus(s) {
@@ -214,34 +220,53 @@ function renderStatus(s) {
 function renderModeButton(s, mode) {
   const btn = $('modeBtn');
   $('modeState').textContent = pendingMode ? 'switching…' : MODE_LABEL[mode];
-  btn.disabled = !!pendingMode || !s.online || mode === 'unknown';
-  btn.title = !s.online ? 'ESP32 is offline' : 'Switch the ESP32 between normal mode and Animation Display Mode';
+  btn.disabled = !!pendingMode || !s.online || mode === 'unknown' || mode === 'draw_pad';
+  btn.title = !s.online ? 'ESP32 is offline' : mode === 'draw_pad' ? 'Exit Draw Pad before changing display mode' : 'Switch the ESP32 between normal mode and Animation Display Mode';
+  const drawBtn = $('drawPadBtn');
+  drawBtn.disabled = !s.online || !s.localIp;
+  drawBtn.title = !s.online ? 'ESP32 is offline' : !s.localIp ? 'ESP32 network address is unavailable' : `Open Draw Pad at ${s.localIp}`;
 }
 function trackTransitions(s) {
   const mode = s.online ? (s.mode || 'unknown') : 'unknown';
   const anim = s.online && mode === 'animation' ? (s.currentAnimationId || null) : null;
+  const drawPadEventId = s.online && s.drawPad ? Number(s.drawPad.eventId || 0) : 0;
   if (!prev) {
-    log(s.online ? `ESP32 connected${mode !== 'unknown' ? ` (${MODE_LABEL[mode]} mode)` : ''}` : 'ESP32 offline (no recent heartbeat)', s.online ? 'info' : 'warn');
+    log(s.online ? 'ESP32 is online' : 'ESP32 is offline — checking connection...', s.online ? 'info' : 'warn');
   } else {
-    if (s.online && !prev.online) log(`ESP32 connected${mode !== 'unknown' ? ` (${MODE_LABEL[mode]} mode)` : ''}`);
-    if (!s.online && prev.online) log('ESP32 disconnected: heartbeat lost', 'warn');
+    if (s.online && !prev.online) log('ESP32 is online');
+    if (!s.online && prev.online) log('ESP32 went offline — checking connection...', 'warn');
     if (s.online && prev.online && mode !== prev.mode && mode !== 'unknown') {
-      if (!pendingMode || pendingMode.target !== mode) log(`Mode changed: ${MODE_LABEL[mode]} mode (changed on the device)`);
+      if (!pendingMode || pendingMode.target !== mode) {
+        if (mode === 'animation') log('Animation mode enabled');
+        else if (mode === 'normal') log('Normal mode enabled');
+        else if (mode === 'draw_pad') log('Drawing Pad opened');
+      }
     }
-    if (anim && anim !== prev.anim) log(`Playback started on ESP32: ${(animationsById.get(anim) || {}).name || anim}`);
+    if (anim && anim !== prev.anim) log(`Playing animation: ${(animationsById.get(anim) || {}).name || anim}`);
+    if (drawPadEventId && drawPadEventId !== prev.drawPadEventId) {
+      const event = s.drawPad && s.drawPad.event;
+      const messages = {
+        opened: ['Drawing Pad opened', 'info'],
+        connected: ['Drawing Pad connected', 'info'],
+        disconnected: ['Drawing Pad disconnected', 'warn'],
+        cleared: ['Drawing Pad cleared', 'info'],
+        failed: ['Drawing Pad connection failed', 'error']
+      };
+      if (messages[event]) log(messages[event][0], messages[event][1]);
+    }
   }
   if (pendingMode) {
     if (s.online && mode === pendingMode.target) {
-      log(`Mode changed: ESP32 is now in ${MODE_LABEL[mode]} mode`);
+      log(mode === 'animation' ? 'Animation mode enabled' : 'Normal mode enabled');
       msg(`ESP32 switched to ${MODE_LABEL[mode]} mode.`);
       pendingMode = null;
     } else if (Date.now() - pendingMode.at > MODE_CONFIRM_MS) {
-      log(`Mode change to ${MODE_LABEL[pendingMode.target]} was not confirmed by the ESP32 (it may be busy, have a locked screen, or have lost Wi-Fi).`, 'warn');
+      log(`Couldn't switch to ${MODE_LABEL[pendingMode.target]} — the device did not confirm the change.`, 'warn');
       msg('Mode change not confirmed by the ESP32.', true);
       pendingMode = null;
     }
   }
-  prev = { online: s.online, mode, anim };
+  prev = { online: s.online, mode, anim, drawPadEventId };
 }
 async function pollStatus() {
   clearTimeout(statusTimer);
@@ -255,8 +280,8 @@ async function pollStatus() {
       renderStatus(s);
     } catch (e) {
       statusFails++;
-      if (statusFails === 1) log(`ESP32 status check failed: ${describe(e)} (will retry)`, 'warn');
-      if (statusFails === 3) log('ESP32 status is still unavailable; retrying less often.', 'error');
+      if (statusFails === 1) log(`Couldn't check ESP32 status — ${describe(e)}. Retrying…`, 'warn');
+      if (statusFails === 3) log('ESP32 status is still unavailable — checking less often.', 'error');
       const pill = $('dot').parentElement;
       if (statusFails >= 3 || !lastStatus) {
         $('deviceStatus').textContent = 'Status unavailable';
@@ -295,11 +320,11 @@ $('fileInput').onchange = async e => {
   } finally { e.target.value = ''; }
 };
 $('slideshowBtn').onclick = async () => {
-  try { await api('/api/slideshow/start', { method: 'POST' }); msg('Slideshow started.'); log('Slideshow started (command sent)'); }
+  try { await api('/api/slideshow/start', { method: 'POST' }); msg('Slideshow started.'); log('Slideshow started'); }
   catch (e) { fail('Could not start slideshow', e); }
 };
 $('stopBtn').onclick = async () => {
-  try { await api('/api/animations/stop', { method: 'POST' }); msg('Stop command sent.'); log('Animation stopped (stop command sent; slideshow stopped too)'); }
+  try { await api('/api/animations/stop', { method: 'POST' }); msg('Stop command sent.'); log('Animation stopped'); }
   catch (e) { fail('Could not send stop', e); }
 };
 $('modeBtn').onclick = async () => {
@@ -310,11 +335,28 @@ $('modeBtn').onclick = async () => {
     await api('/api/device/mode', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ mode: target }) });
     pendingMode = { target, at: Date.now() };
     msg(`Mode change requested: ${MODE_LABEL[target]}`);
-    log(`Mode change requested: ${MODE_LABEL[current]} → ${MODE_LABEL[target]}`);
+    log(`Switching from ${MODE_LABEL[current]} mode to ${MODE_LABEL[target]} mode…`);
     renderModeButton(lastStatus, current);
     pollStatus();
   } catch (e) { fail('Mode change failed', e); }
 };
+$('drawPadBtn').onclick = () => {
+  if (!lastStatus || !lastStatus.online || !lastStatus.localIp) {
+    msg('ESP32 is offline. Connect the device first.', true);
+    log('Couldn’t open Drawing Pad — ESP32 is offline or its network address is unavailable.', 'warn');
+    return;
+  }
+  const url = `http://${lastStatus.localIp}/`;
+  try {
+    window.open(url, '_blank', 'noopener,noreferrer');
+    msg('Drawing Pad opened.');
+    log('Drawing Pad opened');
+  } catch {
+    msg('Couldn’t open Drawing Pad. Check the ESP32 network connection.', true);
+    log('Drawing Pad connection failed', 'error');
+  }
+};
+
 $('refreshBtn').onclick = async () => {
   try { await loadAnimations(); await failures(); await pollStatus(); msg('Refreshed.'); }
   catch (e) { fail('Refresh failed', e); }
