@@ -98,6 +98,20 @@
       "format": "raw-ssd1306-row-major-1bpp-v1",
       "sourceSha256": "1aedaea42ae5ce9f8a0c331fec32c3be40ff1a860371389c1da8d86145d557f8",
       "parser": "deterministic"
+    },
+    {
+      "id": "hand_hold-7a575e36efc5",
+      "name": "hand_hold",
+      "originalFilename": "hand_hold.ino",
+      "width": 128,
+      "height": 64,
+      "frames": 19,
+      "fps": 10,
+      "frameDurationMs": 100,
+      "loop": true,
+      "format": "raw-ssd1306-row-major-1bpp-v1",
+      "sourceSha256": "7a575e36efc5a9c44c5bbaa2086e12451d48c9a037ea7ab497f0b7185cd9cf2a",
+      "parser": "deterministic"
     }
   ]
 }
