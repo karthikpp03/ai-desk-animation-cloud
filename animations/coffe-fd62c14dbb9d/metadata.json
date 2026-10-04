@@ -1,0 +1,19 @@
+{
+  "id": "coffe-fd62c14dbb9d",
+  "name": "coffe",
+  "originalFilename": "coffe.ino",
+  "width": 128,
+  "height": 64,
+  "monochrome": true,
+  "bitsPerPixel": 1,
+  "bytesPerFrame": 1024,
+  "frames": 16,
+  "fps": 8,
+  "frameDurationMs": 125,
+  "loop": true,
+  "format": "raw-ssd1306-row-major-1bpp-v1",
+  "timingSource": "millis() interval",
+  "sourceSha256": "fd62c14dbb9d707366583687a97c0662ab85a495713aadbf58bd83d1f5974bb4",
+  "importedAt": "2026-10-04T16:44:59.704Z",
+  "parser": "deterministic"
+}
