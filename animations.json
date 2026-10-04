@@ -126,6 +126,20 @@
       "format": "raw-ssd1306-row-major-1bpp-v1",
       "sourceSha256": "81b27a5ab71b36d1df103455c90bfd4ac7a6dbe02948ebfe09b12049a2840a68",
       "parser": "deterministic"
+    },
+    {
+      "id": "love-b61fd8eb45f6",
+      "name": "love",
+      "originalFilename": "love.ino",
+      "width": 128,
+      "height": 64,
+      "frames": 1,
+      "fps": 10,
+      "frameDurationMs": 100,
+      "loop": false,
+      "format": "raw-ssd1306-row-major-1bpp-v1",
+      "sourceSha256": "b61fd8eb45f699387b6b7211257a942db4b7d5a4698a50e2c4e7d28af1a5ed11",
+      "parser": "deterministic"
     }
   ]
 }
