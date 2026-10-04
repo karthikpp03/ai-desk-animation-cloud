@@ -100,6 +100,20 @@
       "parser": "deterministic"
     },
     {
+      "id": "face-a3a9fe0895be",
+      "name": "face",
+      "originalFilename": "face.ino",
+      "width": 128,
+      "height": 64,
+      "frames": 71,
+      "fps": 14.925,
+      "frameDurationMs": 67,
+      "loop": true,
+      "format": "raw-ssd1306-row-major-1bpp-v1",
+      "sourceSha256": "a3a9fe0895be2b793e46d20f56b84e2f070b1cedea0edebb144584e8a62184c6",
+      "parser": "deterministic"
+    },
+    {
       "id": "hand_hold-7a575e36efc5",
       "name": "hand_hold",
       "originalFilename": "hand_hold.ino",
