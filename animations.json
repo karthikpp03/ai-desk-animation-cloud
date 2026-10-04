@@ -266,6 +266,20 @@
       "format": "raw-ssd1306-row-major-1bpp-v1",
       "sourceSha256": "a6f2acd119eb6d25070188d7c9f1a0093ce874f87f406187fa870c0f1cd3c13b",
       "parser": "deterministic"
+    },
+    {
+      "id": "stupid-1ff15c240d83",
+      "name": "stupid",
+      "originalFilename": "stupid.ino",
+      "width": 128,
+      "height": 64,
+      "frames": 20,
+      "fps": 10,
+      "frameDurationMs": 100,
+      "loop": true,
+      "format": "raw-ssd1306-row-major-1bpp-v1",
+      "sourceSha256": "1ff15c240d83aece0c98bca245042449fb2703654e7a0f13b69ba44dd2650080",
+      "parser": "deterministic"
     }
   ]
 }
