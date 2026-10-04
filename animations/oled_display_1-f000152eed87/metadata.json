@@ -1,0 +1,19 @@
+{
+  "id": "oled_display_1-f000152eed87",
+  "name": "oled_display_1",
+  "originalFilename": "oled_display (1).ino",
+  "width": 128,
+  "height": 64,
+  "monochrome": true,
+  "bitsPerPixel": 1,
+  "bytesPerFrame": 1024,
+  "frames": 16,
+  "fps": 4,
+  "frameDurationMs": 250,
+  "loop": true,
+  "format": "raw-ssd1306-row-major-1bpp-v1",
+  "timingSource": "millis() interval",
+  "sourceSha256": "f000152eed87dc90acc293c6d08ca258b3e9cb48446dcc24ab35f1a7994dea25",
+  "importedAt": "2026-10-04T14:15:02.494Z",
+  "parser": "deterministic"
+}
