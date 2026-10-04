@@ -1,0 +1,19 @@
+{
+  "id": "back_hug-ef7ad8638339",
+  "name": "back_hug",
+  "originalFilename": "back_hug.ino",
+  "width": 128,
+  "height": 64,
+  "monochrome": true,
+  "bitsPerPixel": 1,
+  "bytesPerFrame": 1024,
+  "frames": 74,
+  "fps": 15.152,
+  "frameDurationMs": 66,
+  "loop": true,
+  "format": "raw-ssd1306-row-major-1bpp-v1",
+  "timingSource": "millis() interval",
+  "sourceSha256": "ef7ad86383398d14541439a7450d1c7fa95e7a03a335684940c9c310798cd955",
+  "importedAt": "2026-10-04T14:12:45.308Z",
+  "parser": "deterministic"
+}
