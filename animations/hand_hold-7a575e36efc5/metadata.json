@@ -1,0 +1,19 @@
+{
+  "id": "hand_hold-7a575e36efc5",
+  "name": "hand_hold",
+  "originalFilename": "hand_hold.ino",
+  "width": 128,
+  "height": 64,
+  "monochrome": true,
+  "bitsPerPixel": 1,
+  "bytesPerFrame": 1024,
+  "frames": 19,
+  "fps": 10,
+  "frameDurationMs": 100,
+  "loop": true,
+  "format": "raw-ssd1306-row-major-1bpp-v1",
+  "timingSource": "millis() interval",
+  "sourceSha256": "7a575e36efc5a9c44c5bbaa2086e12451d48c9a037ea7ab497f0b7185cd9cf2a",
+  "importedAt": "2026-10-04T14:13:54.963Z",
+  "parser": "deterministic"
+}
