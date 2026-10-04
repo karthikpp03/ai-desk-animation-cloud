@@ -5,15 +5,15 @@
   "updatedAt": 1791124432449,
   "currentAnimationId": "face-a3a9fe0895be",
   "deviceOnline": true,
-  "lastSeenAt": 1791125999985,
-  "mode": "draw_pad",
+  "lastSeenAt": 1791126003460,
+  "mode": "normal",
   "requestedMode": "animation",
   "modeRequestId": 1791120083277,
   "localIp": "192.168.29.243",
   "drawPad": {
-    "active": true,
+    "active": false,
     "clients": 0,
-    "eventId": 9,
-    "event": "disconnected"
+    "eventId": 0,
+    "event": ""
   }
 }
