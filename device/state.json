@@ -7,8 +7,8 @@
   "deviceOnline": true,
   "lastSeenAt": 1791126339471,
   "mode": "animation",
-  "requestedMode": "animation",
-  "modeRequestId": 1791126312507,
+  "requestedMode": "normal",
+  "modeRequestId": 1791126368534,
   "localIp": "192.168.29.243",
   "drawPad": {
     "active": false,
