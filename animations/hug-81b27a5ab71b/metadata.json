@@ -1,0 +1,19 @@
+{
+  "id": "hug-81b27a5ab71b",
+  "name": "hug",
+  "originalFilename": "hug.ino",
+  "width": 128,
+  "height": 64,
+  "monochrome": true,
+  "bitsPerPixel": 1,
+  "bytesPerFrame": 1024,
+  "frames": 75,
+  "fps": 14.925,
+  "frameDurationMs": 67,
+  "loop": true,
+  "format": "raw-ssd1306-row-major-1bpp-v1",
+  "timingSource": "millis() interval",
+  "sourceSha256": "81b27a5ab71b36d1df103455c90bfd4ac7a6dbe02948ebfe09b12049a2840a68",
+  "importedAt": "2026-10-04T14:14:08.276Z",
+  "parser": "deterministic"
+}
