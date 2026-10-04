@@ -1,0 +1,19 @@
+{
+  "id": "music-5b9dba7d9075",
+  "name": "music",
+  "originalFilename": "music.ino",
+  "width": 128,
+  "height": 64,
+  "monochrome": true,
+  "bitsPerPixel": 1,
+  "bytesPerFrame": 1024,
+  "frames": 29,
+  "fps": 10,
+  "frameDurationMs": 100,
+  "loop": true,
+  "format": "raw-ssd1306-row-major-1bpp-v1",
+  "timingSource": "millis() interval",
+  "sourceSha256": "5b9dba7d90759cb04cc88a702a75998f836f5ea86382f7d63e290a2ee0e6bc8f",
+  "importedAt": "2026-10-04T14:14:43.310Z",
+  "parser": "deterministic"
+}
