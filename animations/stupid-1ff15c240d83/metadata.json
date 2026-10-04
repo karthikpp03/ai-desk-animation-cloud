@@ -1,0 +1,19 @@
+{
+  "id": "stupid-1ff15c240d83",
+  "name": "stupid",
+  "originalFilename": "stupid.ino",
+  "width": 128,
+  "height": 64,
+  "monochrome": true,
+  "bitsPerPixel": 1,
+  "bytesPerFrame": 1024,
+  "frames": 20,
+  "fps": 10,
+  "frameDurationMs": 100,
+  "loop": true,
+  "format": "raw-ssd1306-row-major-1bpp-v1",
+  "timingSource": "millis() interval",
+  "sourceSha256": "1ff15c240d83aece0c98bca245042449fb2703654e7a0f13b69ba44dd2650080",
+  "importedAt": "2026-10-04T16:45:15.075Z",
+  "parser": "deterministic"
+}
