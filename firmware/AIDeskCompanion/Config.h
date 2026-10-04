@@ -253,6 +253,12 @@
 #define MOTION_PICKUP_CONFIRM_MS 260UL
 #define MOTION_PICKUP_TIMEOUT_MS 1400UL
 #define MOTION_PICKUP_COOLDOWN_MS 1600UL
+// V5 motion special-animation timing. These use the supplied reference
+// bitmap animations through AnimationManager; playback is non-blocking.
+#define MOTION_IDIOT_DURATION_MS   5000UL
+#define MOTION_STUPID_DURATION_MS  2500UL
+#define MOTION_DIZZY_DURATION_MS   3000UL
+
 #define MOTION_LANDING_ACCEL_G 1.65f
 #define MOTION_LANDING_DYNAMIC_Z_G 0.55f
 #define MOTION_LANDING_COOLDOWN_MS 1100UL

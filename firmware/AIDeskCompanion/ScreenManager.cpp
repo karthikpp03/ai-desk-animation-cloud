@@ -479,6 +479,15 @@ void ScreenManager::setSuspended(bool s) {
 
 void ScreenManager::draw() {
   if (suspended) return; // CloudAnimationPlayer is drawing
+
+  // Full-frame motion reactions temporarily own the OLED. They use the
+  // existing AnimationManager, so normal screens/character rendering are
+  // untouched before and after the reaction.
+  if (animation.isBitmapAnimationActive()) {
+    animation.drawBitmapAnimation(display);
+    return;
+  }
+
   display.clearDisplay();
 
   if (animation.isAsleep()) {

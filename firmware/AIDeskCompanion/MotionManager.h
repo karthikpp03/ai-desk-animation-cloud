@@ -46,6 +46,7 @@ private:
   unsigned long liftCandidateStart;
   bool liftMotionSeen;
   bool carried;
+  bool tiltOccurred;
   int8_t lastTilt; // -1 none, 0 front, 1 back, 2 left, 3 right, 4 excessive
 
   bool readSensor();

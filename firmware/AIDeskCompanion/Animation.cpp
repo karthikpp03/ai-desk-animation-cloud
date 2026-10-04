@@ -1,5 +1,7 @@
 #include "Animation.h"
 #include "Config.h"
+#include <Adafruit_SSD1306.h>
+#include "MotionAnimations.h"
 
 AnimationManager::AnimationManager(Character &c)
   : character(c),
@@ -24,7 +26,12 @@ AnimationManager::AnimationManager(Character &c)
     lastMicroIndex(-1),
     nextIdleAt(0),
     nextMicroAt(0),
-    pendingSpecialBeep(false) {}
+    pendingSpecialBeep(false),
+    bitmapAnimation(BitmapAnimation::NONE), bitmapPriority(255),
+    bitmapFrameIndex(0), bitmapStartMs(0), bitmapLastFrameMs(0),
+    bitmapDurationMs(0), bitmapFrameIntervalMs(100) {
+  memset(bitmapFrameBuffer, 0, sizeof(bitmapFrameBuffer));
+}
 
 void AnimationManager::begin() {
   unsigned long now = millis();
@@ -140,7 +147,7 @@ void AnimationManager::notifyInteraction() {
 // important mid-beat.
 // =======================================================================
 bool AnimationManager::playSequence(const SeqStep *s, uint8_t len, AnimPriority pr) {
-  if (asleep || wakeSequenceActive) return false; // sleep/wake own the face
+  if (asleep || wakeSequenceActive || bitmapAnimation != BitmapAnimation::NONE) return false; // special bitmap reactions own the face
   if (seqBusy && pr > activePriority) return false;
   seq = s;
   seqLen = len;
@@ -172,6 +179,133 @@ void AnimationManager::advanceSequence(unsigned long now) {
   } else {
     startStep();
   }
+}
+
+// =======================================================================
+// Supplied full-frame motion reactions
+// =======================================================================
+
+bool AnimationManager::startBitmapAnimation(BitmapAnimation which, uint8_t priority,
+                                             uint32_t durationMs, uint16_t frameIntervalMs) {
+  if (asleep || wakeSequenceActive) return false;
+
+  // Lower number = stronger motion reaction. Do not let a weaker event
+  // restart an animation that is already on screen.
+  if (bitmapAnimation != BitmapAnimation::NONE && priority >= bitmapPriority) return false;
+
+  bitmapAnimation = which;
+  bitmapPriority = priority;
+  bitmapFrameIndex = 0;
+  bitmapStartMs = millis();
+  bitmapLastFrameMs = bitmapStartMs;
+  bitmapDurationMs = durationMs;
+  bitmapFrameIntervalMs = frameIntervalMs;
+
+  // A full-frame reaction owns the face, so stop any expression sequence
+  // cleanly rather than allowing two animation systems to fight.
+  seqBusy = false;
+  activePriority = AnimPriority::IDLE;
+  loadBitmapFrame();
+  return true;
+}
+
+void AnimationManager::loadBitmapFrame() {
+  const uint16_t *offsets = nullptr;
+  const uint8_t *data = nullptr;
+  uint16_t frameCount = 0;
+
+  switch (bitmapAnimation) {
+    case BitmapAnimation::IDIOT:
+      offsets = IDIOT_FRAME_OFFSETS;
+      data = IDIOT_RLE_DATA;
+      frameCount = IDIOT_FRAME_COUNT;
+      break;
+    case BitmapAnimation::STUPID:
+      offsets = STUPID_FRAME_OFFSETS;
+      data = STUPID_RLE_DATA;
+      frameCount = STUPID_FRAME_COUNT;
+      break;
+    case BitmapAnimation::DIZZY:
+      offsets = DIZZY_FRAME_OFFSETS;
+      data = DIZZY_RLE_DATA;
+      frameCount = DIZZY_FRAME_COUNT;
+      break;
+    default:
+      return;
+  }
+
+  uint16_t start = pgm_read_word(&offsets[bitmapFrameIndex]);
+  uint16_t end = pgm_read_word(&offsets[bitmapFrameIndex + 1]);
+  uint16_t out = 0;
+  for (uint16_t i = start; i + 1 < end && out < sizeof(bitmapFrameBuffer); i += 2) {
+    uint8_t count = pgm_read_byte(&data[i]);
+    uint8_t value = pgm_read_byte(&data[i + 1]);
+    uint16_t room = (uint16_t)sizeof(bitmapFrameBuffer) - out;
+    uint8_t n = (count > room) ? (uint8_t)room : count;
+    memset(bitmapFrameBuffer + out, value, n);
+    out += n;
+  }
+
+  // Guard against a malformed/partial generated frame without affecting
+  // normal animation playback.
+  if (out < sizeof(bitmapFrameBuffer)) {
+    memset(bitmapFrameBuffer + out, 0, sizeof(bitmapFrameBuffer) - out);
+  }
+
+  (void)frameCount;
+}
+
+void AnimationManager::updateBitmapAnimation(unsigned long now) {
+  if (bitmapAnimation == BitmapAnimation::NONE) return;
+
+  if (now - bitmapStartMs >= bitmapDurationMs) {
+    bitmapAnimation = BitmapAnimation::NONE;
+    bitmapPriority = 255;
+    seqBusy = false;
+    activePriority = AnimPriority::IDLE;
+    character.setExpression(Expression::NORMAL, 0);
+    scheduleNextIdleChange();
+    scheduleNextMicro();
+    return;
+  }
+
+  if (now - bitmapLastFrameMs < bitmapFrameIntervalMs) return;
+
+  bitmapLastFrameMs = now;
+  uint16_t frameCount = 0;
+  switch (bitmapAnimation) {
+    case BitmapAnimation::IDIOT: frameCount = IDIOT_FRAME_COUNT; break;
+    case BitmapAnimation::STUPID: frameCount = STUPID_FRAME_COUNT; break;
+    case BitmapAnimation::DIZZY: frameCount = DIZZY_FRAME_COUNT; break;
+    default: return;
+  }
+
+  bitmapFrameIndex++;
+  if (bitmapFrameIndex >= frameCount) bitmapFrameIndex = 0;
+  loadBitmapFrame();
+}
+
+bool AnimationManager::isBitmapAnimationActive() const {
+  return bitmapAnimation != BitmapAnimation::NONE;
+}
+
+void AnimationManager::drawBitmapAnimation(Adafruit_SSD1306 &display) {
+  if (bitmapAnimation == BitmapAnimation::NONE) return;
+  display.clearDisplay();
+  display.drawBitmap(0, 0, bitmapFrameBuffer, SCREEN_WIDTH, SCREEN_HEIGHT, SSD1306_WHITE);
+  display.display();
+}
+
+void AnimationManager::reactMotionIdiot() {
+  startBitmapAnimation(BitmapAnimation::IDIOT, 2, MOTION_IDIOT_DURATION_MS, 100);
+}
+
+void AnimationManager::reactMotionStupid() {
+  startBitmapAnimation(BitmapAnimation::STUPID, 3, MOTION_STUPID_DURATION_MS, 100);
+}
+
+void AnimationManager::reactMotionDizzy() {
+  startBitmapAnimation(BitmapAnimation::DIZZY, 1, MOTION_DIZZY_DURATION_MS, 50);
 }
 
 // ---- Public one-shot / named reactions --------------------------------
@@ -428,7 +562,6 @@ void AnimationManager::reactMotionShake(uint8_t level) {
   else if (level == 2) playSequence(MOTION_SHAKE_2_SEQ, sizeof(MOTION_SHAKE_2_SEQ)/sizeof(SeqStep), AnimPriority::NOTIFICATION);
   else playSequence(MOTION_SHAKE_1_SEQ, sizeof(MOTION_SHAKE_1_SEQ)/sizeof(SeqStep), AnimPriority::NOTIFICATION);
 }
-void AnimationManager::reactMotionDizzy()  { playSequence(MOTION_DIZZY_SEQ, sizeof(MOTION_DIZZY_SEQ)/sizeof(SeqStep), AnimPriority::NOTIFICATION); }
 void AnimationManager::reactMotionShock()  { playSequence(MOTION_WORRIED_SEQ, sizeof(MOTION_WORRIED_SEQ)/sizeof(SeqStep), AnimPriority::NOTIFICATION); }
 void AnimationManager::reactMotionPickup() { playSequence(MOTION_PICKUP_SEQ, sizeof(MOTION_PICKUP_SEQ)/sizeof(SeqStep), AnimPriority::NOTIFICATION); }
 void AnimationManager::reactMotionLanding(){ playSequence(MOTION_LANDING_SEQ, sizeof(MOTION_LANDING_SEQ)/sizeof(SeqStep), AnimPriority::NOTIFICATION); }
@@ -735,6 +868,11 @@ void AnimationManager::pickAndPlayMicro() {
 // =======================================================================
 void AnimationManager::update(bool allowSleep) {
   unsigned long now = millis();
+
+  if (bitmapAnimation != BitmapAnimation::NONE) {
+    updateBitmapAnimation(now);
+    return;
+  }
 
   if (wakeSequenceActive) {
     updateWakeSequence();

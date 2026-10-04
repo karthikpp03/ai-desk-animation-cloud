@@ -22,7 +22,7 @@ MotionManager::MotionManager(AnimationManager &a, BuzzerManager &b,
     lastShakeMs(0), lastWakeMs(0), lastPickupMs(0), lastLandingMs(0),
     shakePeakCount(0), shakePeakWindowStart(0), shakeBurstCount(0), shakeBurstWindowStart(0),
     liftCandidate(false), liftCandidateStart(0), liftMotionSeen(false), carried(false),
-    lastTilt(-1) {}
+    tiltOccurred(false), lastTilt(-1) {}
 
 bool MotionManager::writeRegister(uint8_t reg, uint8_t value) {
   Wire.beginTransmission(MPU6050_ADDRESS);
@@ -188,6 +188,7 @@ void MotionManager::triggerTilt(int8_t dir) {
   if (!cooldownPassed(lastTiltMs, MOTION_TILT_COOLDOWN_MS)) return;
   lastTiltMs = now;
   lastTilt = dir;
+  tiltOccurred = true;
 
   switch (dir) {
     case 0: animation.reactMotionTiltFront(); if (earMgr.isEnabled()) earMgr.reactMotionFront(); break;
@@ -203,8 +204,9 @@ void MotionManager::triggerPickup() {
   lastPickupMs = now;
   liftCandidate = false;
   liftMotionSeen = false;
+  tiltOccurred = false;
   carried = true;
-  animation.reactMotionPickup();
+  animation.reactMotionIdiot();
   if (earMgr.isEnabled()) earMgr.reactMotionPickup();
   buzzer.beepFun();
   if (ledMgr.isEnabled()) ledMgr.playWake();
@@ -216,6 +218,7 @@ void MotionManager::triggerLanding() {
   lastLandingMs = now;
   liftCandidate = false;
   liftMotionSeen = false;
+  tiltOccurred = false;
   carried = false;
   animation.reactMotionLanding();
   if (earMgr.isEnabled()) earMgr.reactMotionLanding();
@@ -361,6 +364,7 @@ void MotionManager::handleMotion() {
       if (lastTilt != 4 && cooldownPassed(lastTiltMs, MOTION_EXCESSIVE_TILT_COOLDOWN_MS)) {
         lastTiltMs = now;
         lastTilt = 4;
+        tiltOccurred = true;
         animation.reactMotionWorried();
         if (earMgr.isEnabled()) earMgr.reactMotionWorried();
       }
@@ -370,6 +374,10 @@ void MotionManager::handleMotion() {
                      : (tiltLR > 0 ? 2 : 3);
       if (lastTilt != dir) triggerTilt(dir);
     } else if (fabsf(tiltFB) <= MOTION_TILT_RELEASE_DEG && fabsf(tiltLR) <= MOTION_TILT_RELEASE_DEG) {
+      if (tiltOccurred) {
+        tiltOccurred = false;
+        animation.reactMotionStupid();
+      }
       lastTilt = -1;
     }
   }

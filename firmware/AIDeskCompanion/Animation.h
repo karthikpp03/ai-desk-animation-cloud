@@ -1,6 +1,8 @@
 #pragma once
 #include "Character.h"
 
+class Adafruit_SSD1306;
+
 // Internal priority tiers for the animation engine. Lower number wins —
 // a request can preempt whatever is currently playing at an equal or
 // lower-priority (higher number) tier, but cannot interrupt something
@@ -92,6 +94,13 @@ public:
   void reactMotionShock();
   void reactMotionPickup();
   void reactMotionLanding();
+  // V5 — supplied full-frame motion reactions, integrated into the same
+  // AnimationManager/state machine. They preempt ordinary expression sequences
+  // but return control to the existing normal animation automatically.
+  void reactMotionIdiot();
+  void reactMotionStupid();
+  bool isBitmapAnimationActive() const;
+  void drawBitmapAnimation(Adafruit_SSD1306 &display);
   void reactMotionWake();
   void reactMotionWorried();
 
@@ -150,4 +159,25 @@ private:
   void pickAndPlayMicro();
 
   bool pendingSpecialBeep; // V2: set when a rare "special event" idle behaviour is picked
+
+  enum class BitmapAnimation : uint8_t {
+    NONE,
+    IDIOT,
+    STUPID,
+    DIZZY
+  };
+
+  BitmapAnimation bitmapAnimation;
+  uint8_t bitmapPriority; // 1=dizzy, 2=pickup/idiot, 3=return/stupid
+  uint16_t bitmapFrameIndex;
+  uint32_t bitmapStartMs;
+  uint32_t bitmapLastFrameMs;
+  uint32_t bitmapDurationMs;
+  uint16_t bitmapFrameIntervalMs;
+  uint8_t bitmapFrameBuffer[1024];
+
+  bool startBitmapAnimation(BitmapAnimation which, uint8_t priority,
+                            uint32_t durationMs, uint16_t frameIntervalMs);
+  void updateBitmapAnimation(unsigned long now);
+  void loadBitmapFrame();
 };
