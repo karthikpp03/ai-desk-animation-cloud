@@ -156,6 +156,20 @@
       "parser": "deterministic"
     },
     {
+      "id": "idiot-d39acd7f1cc0",
+      "name": "idiot",
+      "originalFilename": "idiot.ino",
+      "width": 128,
+      "height": 64,
+      "frames": 50,
+      "fps": 10,
+      "frameDurationMs": 100,
+      "loop": true,
+      "format": "raw-ssd1306-row-major-1bpp-v1",
+      "sourceSha256": "d39acd7f1cc0735875a8ee5ee30e7640bd9f69d5439e5b0043098aa18f5ff551",
+      "parser": "deterministic"
+    },
+    {
       "id": "lala-34152f955cf6",
       "name": "lala",
       "originalFilename": "lala.ino",
