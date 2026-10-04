@@ -1,8 +1,8 @@
 {
-  "command": "stop",
-  "animationId": null,
+  "command": "play",
+  "animationId": "alone-9d9f63b46ddb",
   "slideshow": false,
-  "updatedAt": 1791108859963,
+  "updatedAt": 1791109203463,
   "currentAnimationId": null,
   "deviceOnline": false,
   "lastSeenAt": 0
