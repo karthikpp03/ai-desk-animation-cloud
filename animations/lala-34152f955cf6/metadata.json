@@ -1,0 +1,19 @@
+{
+  "id": "lala-34152f955cf6",
+  "name": "lala",
+  "originalFilename": "lala.ino",
+  "width": 128,
+  "height": 64,
+  "monochrome": true,
+  "bitsPerPixel": 1,
+  "bytesPerFrame": 1024,
+  "frames": 10,
+  "fps": 14.925,
+  "frameDurationMs": 67,
+  "loop": true,
+  "format": "raw-ssd1306-row-major-1bpp-v1",
+  "timingSource": "millis() interval",
+  "sourceSha256": "34152f955cf6debc2db15c7e1619fba9ce81012a9b583246fe151860508e49e2",
+  "importedAt": "2026-10-04T14:33:00.432Z",
+  "parser": "deterministic"
+}
