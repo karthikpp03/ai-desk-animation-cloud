@@ -13,3 +13,13 @@ STORE_ORIGINAL_INO = "false"
 # GITHUB_OWNER
 # GITHUB_REPO
 # GITHUB_BRANCH
+
+# Global Draw Pad relay: one SQLite-backed Durable Object coordinates the
+# authenticated ESP32 WebSocket and short-lived browser sessions.
+[[durable_objects.bindings]]
+name = "DRAW_PAD_RELAY"
+class_name = "DrawPadRelay"
+
+[[migrations]]
+tag = "drawpad-relay-v1"
+new_sqlite_classes = ["DrawPadRelay"]

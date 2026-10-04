@@ -168,6 +168,23 @@ Implemented in `CloudAnimation.h / .cpp`; the Worker, website, storage and anima
 - **Disable:** set `ENABLE_ANIMATION_MODE false` in `Config.h`.
 - **Library note:** needs ArduinoJson **v7** (the player uses `JsonDocument`).
 
+## ✎ Global Draw Pad
+
+The Draw Pad supports both the existing local ESP32 page and a global cloud-relay path.
+
+- The Animation Cloud **Draw Pad** button creates a short-lived Draw Pad session.
+- The browser connects to the existing Cloudflare Worker over secure WebSocket.
+- The ESP32 makes the outbound WebSocket connection, so the browser does not need to be on the same Wi-Fi network.
+- Drawing commands are relayed live to the ESP32's 128×64 SSD1306.
+- The existing local Draw Pad page remains available for same-network use.
+- Closing the Draw Pad WebSocket releases OLED ownership immediately; a stale session is also released automatically.
+
+### Additional Arduino library
+
+Install **WebSockets** (`arduinoWebSockets`, Links2004) in Arduino IDE for the global relay client.
+
+The existing `ESPAsyncWebServer` / `AsyncTCP` libraries are still required for the local Draw Pad.
+
 ## 🫨 MPU6050 motion interaction
 
 The GY-521 MPU6050 is used through the existing I²C bus.

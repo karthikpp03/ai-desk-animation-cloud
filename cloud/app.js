@@ -223,8 +223,8 @@ function renderModeButton(s, mode) {
   btn.disabled = !!pendingMode || !s.online || mode === 'unknown' || mode === 'draw_pad';
   btn.title = !s.online ? 'ESP32 is offline' : mode === 'draw_pad' ? 'Exit Draw Pad before changing display mode' : 'Switch the ESP32 between normal mode and Animation Display Mode';
   const drawBtn = $('drawPadBtn');
-  drawBtn.disabled = !s.online || !s.localIp;
-  drawBtn.title = !s.online ? 'ESP32 is offline' : !s.localIp ? 'ESP32 network address is unavailable' : `Open Draw Pad at ${s.localIp}`;
+  drawBtn.disabled = !s.online;
+  drawBtn.title = !s.online ? 'ESP32 is offline' : 'Open the global Draw Pad';
 }
 function trackTransitions(s) {
   const mode = s.online ? (s.mode || 'unknown') : 'unknown';
@@ -340,20 +340,28 @@ $('modeBtn').onclick = async () => {
     pollStatus();
   } catch (e) { fail('Mode change failed', e); }
 };
-$('drawPadBtn').onclick = () => {
-  if (!lastStatus || !lastStatus.online || !lastStatus.localIp) {
+$('drawPadBtn').onclick = async () => {
+  if (!lastStatus || !lastStatus.online) {
     msg('ESP32 is offline. Connect the device first.', true);
-    log('Couldn’t open Drawing Pad — ESP32 is offline or its network address is unavailable.', 'warn');
+    log('Drawing Pad connection failed', 'error');
     return;
   }
-  const url = `http://${lastStatus.localIp}/`;
+
+  // Create a short-lived cloud session. The ESP32 local IP is no longer
+  // needed, so the friend can stay on any internet connection.
+  const popup = window.open('about:blank', '_blank');
   try {
-    window.open(url, '_blank', 'noopener,noreferrer');
+    const data = await api('/api/drawpad/session', { method: 'POST' });
+    if (!data?.session) throw new Error('Could not create a Draw Pad session.');
+    const page = new URL('drawpad.html', window.location.href);
+    page.searchParams.set('session', data.session);
+    if (popup) popup.location.href = page.href;
+    else window.location.href = page.href;
     msg('Drawing Pad opened.');
     log('Drawing Pad opened');
-  } catch {
-    msg('Couldn’t open Drawing Pad. Check the ESP32 network connection.', true);
-    log('Drawing Pad connection failed', 'error');
+  } catch (e) {
+    if (popup && !popup.closed) popup.close();
+    fail('Drawing Pad connection failed', e);
   }
 };
 

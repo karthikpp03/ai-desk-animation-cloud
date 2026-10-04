@@ -5,11 +5,23 @@
 #include <WiFi.h>
 #include <AsyncTCP.h>
 #include <ESPAsyncWebServer.h>
+#include <WebSocketsClient.h>
 
 namespace {
 AsyncWebServer server(80);
 AsyncWebSocket ws("/ws");
+WebSocketsClient relay;
 constexpr uint32_t CLIENT_IDLE_TIMEOUT_MS = 30000UL;
+constexpr uint32_t RELAY_RECONNECT_MS = 5000UL;
+
+#ifndef SECRET_API_BASE
+#define SECRET_API_BASE ""
+#endif
+#ifndef SECRET_DEVICE_TOKEN
+#define SECRET_DEVICE_TOKEN ""
+#endif
+const char *RELAY_API_BASE = SECRET_API_BASE;
+const char *RELAY_DEVICE_TOKEN = SECRET_DEVICE_TOKEN;
 }
 
 DrawPadManager* DrawPadManager::instance = nullptr;
@@ -39,15 +51,29 @@ void DrawPadManager::begin() {
   ws.onEvent(DrawPadManager::onWsEvent);
   server.addHandler(&ws);
   server.begin();
+
+  // Global Draw Pad: ESP32 opens an outbound WSS connection to the existing
+  // Cloudflare Worker, so browsers never need the ESP32's private IP.
+  if (RELAY_API_BASE[0] && RELAY_DEVICE_TOKEN[0]) {
+    String base = String(RELAY_API_BASE);
+    base.replace("https://", "");
+    base.replace("http://", "");
+    int slash = base.indexOf('/');
+    if (slash >= 0) base.remove(slash);
+    relay.setExtraHeaders((String("X-Device-Token: ") + RELAY_DEVICE_TOKEN).c_str());
+    relay.setReconnectInterval(RELAY_RECONNECT_MS);
+    relay.onEvent(DrawPadManager::onRelayEvent);
+    relay.beginSSL(base.c_str(), 443, "/api/drawpad/device");
+    xTaskCreatePinnedToCore(DrawPadManager::relayTask, "drawRelay", 8192, this, 1, &relayTaskHandle, 0);
+  }
 }
 
 void DrawPadManager::update() {
   ws.cleanupClients();
 
-  // A browser closing the Draw Pad should hand the OLED back automatically.
-  // The explicit Exit button also closes the WebSocket, so no manual device
-  // reset or physical-button remapping is required.
-  if (active && clients == 0 && lastClientChangeAt &&
+  // A browser closing the Draw Pad releases the OLED from the WebSocket
+  // disconnect callback. The timeout remains only as a stale-client safety net.
+  if (active && !remotePadActive && clients == 0 && lastClientChangeAt &&
       millis() - lastClientChangeAt >= CLIENT_IDLE_TIMEOUT_MS) {
     modeRequest = 0;
   }
@@ -196,6 +222,65 @@ void DrawPadManager::handleMessage(uint8_t *data, size_t len) {
   xSemaphoreGive(frameMutex);
 }
 
+void DrawPadManager::handleRelayMessage(uint8_t *data, size_t len) {
+  static char buf[600];
+  if (!data || !len) return;
+  if (len >= sizeof(buf)) len = sizeof(buf) - 1;
+  memcpy(buf, data, len);
+  buf[len] = '\0';
+
+  if (strstr(buf, "\"type\":\"open\"")) {
+    remotePadActive = true;
+    recordEvent("opened");
+    setModeRequest(1);
+    return;
+  }
+  if (strstr(buf, "\"type\":\"release\"")) {
+    remotePadActive = false;
+    recordEvent("disconnected");
+    setModeRequest(0);
+    return;
+  }
+  if (strstr(buf, "\"type\":\"device-online\"")) return;
+  if (strstr(buf, "\"type\":\"device-offline\"")) return;
+
+  // Everything else from the authenticated browser session is a Draw Pad
+  // command (CLR / P / L) and follows the same local command path.
+  handleMessage(data, len);
+}
+
+void DrawPadManager::relayTask(void *arg) {
+  auto *self = static_cast<DrawPadManager*>(arg);
+  (void)self;
+  for (;;) {
+    if (WiFi.status() == WL_CONNECTED && RELAY_API_BASE[0] && RELAY_DEVICE_TOKEN[0]) {
+      relay.loop();
+      vTaskDelay(pdMS_TO_TICKS(10));
+    } else {
+      vTaskDelay(pdMS_TO_TICKS(500));
+    }
+  }
+}
+
+void DrawPadManager::onRelayEvent(WStype_t type, uint8_t *payload, size_t length) {
+  if (!instance) return;
+  if (type == WStype_CONNECTED) {
+    instance->remoteRelayConnected = true;
+    return;
+  }
+  if (type == WStype_DISCONNECTED || type == WStype_ERROR) {
+    instance->remoteRelayConnected = false;
+    if (instance->remotePadActive) {
+      instance->remotePadActive = false;
+      instance->setModeRequest(0);
+    }
+    return;
+  }
+  if (type == WStype_TEXT) {
+    instance->handleRelayMessage(payload, length);
+  }
+}
+
 void DrawPadManager::onWsEvent(AsyncWebSocket *serverPtr, AsyncWebSocketClient *client,
                                AwsEventType type, void *arg, uint8_t *data, size_t len) {
   (void)serverPtr;
@@ -208,7 +293,10 @@ void DrawPadManager::onWsEvent(AsyncWebSocket *serverPtr, AsyncWebSocketClient *
   } else if (type == WS_EVT_DISCONNECT) {
     if (instance->clients) instance->clients--;
     instance->lastClientChangeAt = millis();
-    if (instance->clients == 0) instance->recordEvent("disconnected");
+    if (instance->clients == 0) {
+      instance->recordEvent("disconnected");
+      if (!instance->remotePadActive) instance->setModeRequest(0);
+    }
   } else if (type == WS_EVT_DATA) {
     AwsFrameInfo *info = static_cast<AwsFrameInfo*>(arg);
     if (info && info->final && info->index == 0 && info->len == len && info->opcode == WS_TEXT) {

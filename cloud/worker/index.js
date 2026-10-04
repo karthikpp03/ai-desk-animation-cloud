@@ -1,3 +1,10 @@
+let DurableObject;
+try {
+  ({ DurableObject } = await import('cloudflare:workers'));
+} catch {
+  // Local Node-based worker tests do not provide the Cloudflare runtime module.
+  DurableObject = class {};
+}
 import { parseIno } from './parser/inoParser.js';
 import { validateAnimation } from './validator/animation.js';
 import { analyzeWithOpenAI } from './ai/analyze.js';
@@ -15,6 +22,7 @@ const HEARTBEAT_PERSIST_MS = 40000;
 const ONLINE_WINDOW_MS = 100000;
 const DEVICE_MODES = ['normal', 'animation'];
 const HEARTBEAT_MODES = ['normal', 'animation', 'draw_pad'];
+const DRAW_PAD_SESSION_MS = 15 * 60 * 1000;
 
 function json(data, status = 200, extra = {}) { return new Response(JSON.stringify(data), { status, headers: { ...JSON_HEADERS, ...extra } }); }
 function cors(request, response) {
@@ -213,6 +221,137 @@ async function commandFromAdmin(request, env, command, animationId = null, slide
   return json({ success: true });
 }
 
+
+function drawPadStub(env) {
+  return env.DRAW_PAD_RELAY.getByName('main');
+}
+
+export class DrawPadRelay extends DurableObject {
+  constructor(ctx, env) {
+    super(ctx, env);
+    this.ctx = ctx;
+    this.env = env;
+  }
+
+  sockets(role) {
+    return this.ctx.getWebSockets().filter(ws => ws.deserializeAttachment()?.role === role);
+  }
+
+  sendToRole(role, message) {
+    for (const ws of this.sockets(role)) {
+      if (ws.readyState === WebSocket.OPEN) {
+        try { ws.send(message); } catch {}
+      }
+    }
+  }
+
+  async fetch(request) {
+    const url = new URL(request.url);
+
+    if (request.method === 'POST' && url.pathname === '/api/drawpad/session') {
+      const token = `${crypto.randomUUID()}-${crypto.randomUUID()}`;
+      const expiresAt = Date.now() + DRAW_PAD_SESSION_MS;
+      await this.ctx.storage.put('session', { token, expiresAt });
+      // A new session is exclusive: release any older browser session.
+      this.sendToRole('browser', JSON.stringify({ type: 'session-replaced' }));
+      for (const ws of this.sockets('browser')) {
+        try { ws.close(1000, 'Replaced by a new Draw Pad session'); } catch {}
+      }
+      return json({ success: true, session: token, expiresAt });
+    }
+
+    if (request.headers.get('Upgrade')?.toLowerCase() !== 'websocket') {
+      return json({ error: 'WebSocket upgrade required.' }, 426);
+    }
+
+    let role;
+    if (url.pathname === '/api/drawpad/device') {
+      role = 'device';
+    } else if (url.pathname === '/api/drawpad/browser') {
+      role = 'browser';
+      const token = url.searchParams.get('session') || '';
+      const session = await this.ctx.storage.get('session');
+      if (!session || session.token !== token || Date.now() >= Number(session.expiresAt || 0)) {
+        return json({ error: 'Draw Pad session expired. Open Draw Pad again.' }, 401);
+      }
+      await this.ctx.storage.put('browserLastSeenAt', Date.now());
+    } else {
+      return json({ error: 'Not found' }, 404);
+    }
+
+    // Only one device connection and one browser session are allowed.
+    for (const ws of this.sockets(role)) {
+      try { ws.close(1000, 'Replaced by a new connection'); } catch {}
+    }
+
+    const pair = new WebSocketPair();
+    const [client, server] = Object.values(pair);
+    this.ctx.acceptWebSocket(server);
+    server.serializeAttachment({ role, connectedAt: Date.now() });
+
+    if (role === 'browser') {
+      await this.ctx.storage.setAlarm(Date.now() + 30000);
+      this.sendToRole('device', JSON.stringify({ type: 'open' }));
+    } else {
+      // A fresh ESP32 connection is treated as a clean boot/recovery state.
+      // Do not automatically re-enter DRAW_PAD just because an old browser
+      // tab is still open after the device rebooted.
+      this.sendToRole('browser', JSON.stringify({ type: 'device-online' }));
+    }
+
+    return new Response(null, { status: 101, webSocket: client });
+  }
+
+  async webSocketMessage(ws, message) {
+    const state = ws.deserializeAttachment() || {};
+    if (state.role === 'browser') {
+      const text = typeof message === 'string' ? message : new TextDecoder().decode(message);
+      if (text === 'KEEPALIVE' || text === '{"type":"keepalive"}') {
+        await this.ctx.storage.put('browserLastSeenAt', Date.now());
+        await this.ctx.storage.setAlarm(Date.now() + 30000);
+        if (ws.readyState === WebSocket.OPEN) ws.send('KEEPALIVE_ACK');
+        return;
+      }
+      this.sendToRole('device', message);
+    } else if (state.role === 'device') {
+      this.sendToRole('browser', message);
+    }
+  }
+
+  async webSocketClose(ws) {
+    const state = ws.deserializeAttachment() || {};
+    if (state.role === 'browser') {
+      this.sendToRole('device', JSON.stringify({ type: 'release' }));
+    } else if (state.role === 'device') {
+      this.sendToRole('browser', JSON.stringify({ type: 'device-offline' }));
+    }
+  }
+
+  async webSocketError(ws) {
+    const state = ws.deserializeAttachment() || {};
+    if (state.role === 'browser') {
+      this.sendToRole('device', JSON.stringify({ type: 'release' }));
+    } else if (state.role === 'device') {
+      this.sendToRole('browser', JSON.stringify({ type: 'device-offline' }));
+    }
+  }
+
+  async alarm() {
+    const browsers = this.sockets('browser');
+    if (!browsers.length) return;
+    const session = await this.ctx.storage.get('session');
+    const lastSeen = Number(await this.ctx.storage.get('browserLastSeenAt') || 0);
+    if (!session || Date.now() >= Number(session.expiresAt || 0) || !lastSeen || Date.now() - lastSeen >= 30000) {
+      for (const ws of browsers) {
+        try { ws.close(1000, 'Draw Pad session timed out'); } catch {}
+      }
+      this.sendToRole('device', JSON.stringify({ type: 'release' }));
+      return;
+    }
+    await this.ctx.storage.setAlarm(Date.now() + 30000);
+  }
+}
+
 export default {
   async fetch(request, env) {
     if (request.method === 'OPTIONS') return cors(request, new Response(null, { status: 204 }));
@@ -269,6 +408,21 @@ export default {
       if (url.pathname === '/api/slideshow/start' && request.method === 'POST') return cors(request, await commandFromAdmin(request, env, 'slideshow', null, true));
       if (url.pathname === '/api/slideshow/stop' && request.method === 'POST') return cors(request, await commandFromAdmin(request, env, 'stop', null, false));
       if (url.pathname === '/api/device/command' && request.method === 'GET') return cors(request, await deviceCommand(request, env));
+      // Global Draw Pad relay. The browser receives a short-lived session token;
+      // the ESP32 authenticates its outbound WebSocket with the existing DEVICE_TOKEN.
+      if (url.pathname === '/api/drawpad/session' && request.method === 'POST') {
+        return cors(request, await drawPadStub(env).fetch(new Request(request.url, { method: 'POST' })));
+      }
+      if ((url.pathname === '/api/drawpad/browser' || url.pathname === '/api/drawpad/device') &&
+          request.headers.get('Upgrade')?.toLowerCase() === 'websocket') {
+        if (url.pathname.endsWith('/device') && !(await requireDevice(request, env))) {
+          return json({ error: 'Unauthorized' }, 401);
+        }
+        // Do not wrap the 101 WebSocket response in a normal Response/CORS
+        // helper; the upgrade response must preserve its webSocket endpoint.
+        return env.DRAW_PAD_RELAY.getByName('main').fetch(request);
+      }
+
       if (url.pathname === '/api/device/status' && request.method === 'GET') {
         const state = await readState(env);
         const online = Date.now() - Number(state.lastSeenAt || 0) < ONLINE_WINDOW_MS;

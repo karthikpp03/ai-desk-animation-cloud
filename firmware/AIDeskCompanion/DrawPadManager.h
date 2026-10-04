@@ -3,6 +3,7 @@
 #include <Arduino.h>
 #include <Adafruit_SSD1306.h>
 #include <ESPAsyncWebServer.h>
+#include <WebSocketsClient.h>
 #include "WiFiManager.h"
 
 // Lightweight local web drawing pad. The network callbacks only update a
@@ -34,6 +35,8 @@ private:
   volatile uint8_t clients = 0;
   volatile bool dirty = false;
   volatile uint32_t lastClientChangeAt = 0;
+  volatile bool remotePadActive = false;
+  volatile bool remoteRelayConnected = false;
 
   uint8_t framebuffer[1024]{};
   SemaphoreHandle_t frameMutex = nullptr;
@@ -46,6 +49,7 @@ private:
   void handleCommand(char *cmd);
   void handleMessage(uint8_t *data, size_t len);
   void handleWebEvent(const char *type);
+  void handleRelayMessage(uint8_t *data, size_t len);
   void drawThickLine(int x0, int y0, int x1, int y1, int size);
   void drawDot(int x, int y, int size);
   void clearPanel();
@@ -54,5 +58,8 @@ private:
 
   static void onWsEvent(AsyncWebSocket *server, AsyncWebSocketClient *client,
                         AwsEventType type, void *arg, uint8_t *data, size_t len);
+  static void onRelayEvent(WStype_t type, uint8_t *payload, size_t length);
+  static void relayTask(void *arg);
+  TaskHandle_t relayTaskHandle = nullptr;
   static DrawPadManager *instance;
 };
