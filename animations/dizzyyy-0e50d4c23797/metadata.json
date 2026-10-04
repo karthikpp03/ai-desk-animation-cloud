@@ -1,0 +1,19 @@
+{
+  "id": "dizzyyy-0e50d4c23797",
+  "name": "dizzyyy",
+  "originalFilename": "dizzyyy.ino",
+  "width": 128,
+  "height": 64,
+  "monochrome": true,
+  "bitsPerPixel": 1,
+  "bytesPerFrame": 1024,
+  "frames": 20,
+  "fps": 20,
+  "frameDurationMs": 50,
+  "loop": true,
+  "format": "raw-ssd1306-row-major-1bpp-v1",
+  "timingSource": "millis() interval",
+  "sourceSha256": "0e50d4c23797df214e348630854f450c0b8733192a1d1e02c86beb190df8869e",
+  "importedAt": "2026-10-04T16:45:23.679Z",
+  "parser": "deterministic"
+}
