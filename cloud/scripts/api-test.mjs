@@ -39,9 +39,10 @@ else if (cmd === 'upload') {
     ['device/command, wrong token', await req('GET', '/api/device/command', { 'X-Device-Token': 'wrong' }), 401],
     ['device/command, ADMIN token (must not work)', await req('GET', '/api/device/command', { 'X-Device-Token': env.ADMIN_TOKEN }), 401],
     ['device/command, DEVICE token', await req('GET', '/api/device/command', device), 200],
-    ['stop, no token', await req('POST', '/api/animations/stop'), 401],
-    ['stop, DEVICE token (must not work)', await req('POST', '/api/animations/stop', { 'X-Admin-Token': env.DEVICE_TOKEN }), 401],
-    ['stop, ADMIN token', await req('POST', '/api/animations/stop', admin), 200],
+    ['stop, no token (website is public)', await req('POST', '/api/animations/stop'), 200],
+    ['delete, no token (still admin-only)', await req('DELETE', `/api/animations/${id}`), 401],
+    ['heartbeat, no device token', await req('POST', '/api/device/heartbeat', { 'Content-Type': 'application/json' }, '{"mode":"normal"}'), 401],
+    ['status (public)', await req('GET', '/api/device/status'), 200],
     ['frames, no token', await req('GET', `/api/animations/${id}/frames`), 401],
     ['frames, DEVICE token', await req('GET', `/api/animations/${id}/frames`, device), 200]
   ];

@@ -7,7 +7,13 @@ const MAX_UPLOAD = 2 * 1024 * 1024;
 const MAX_CONVERTED = 8 * 1024 * 1024;
 const MAX_FRAMES = 600;
 const JSON_HEADERS = { 'Content-Type': 'application/json; charset=utf-8' };
-const DEFAULT_STATE = { command: 'stop', animationId: null, slideshow: false, updatedAt: 0, currentAnimationId: null, deviceOnline: false, lastSeenAt: 0 };
+const DEFAULT_STATE = { command: 'stop', animationId: null, slideshow: false, updatedAt: 0, currentAnimationId: null, deviceOnline: false, lastSeenAt: 0, mode: 'unknown', requestedMode: null, modeRequestId: 0 };
+// Online/offline: the ESP32 sends a heartbeat every few seconds, but device/state.json lives in GitHub (one commit per
+// write), so lastSeenAt is only persisted when it is older than HEARTBEAT_PERSIST_MS (or the mode/animation changed).
+// ONLINE_WINDOW_MS must stay comfortably larger than HEARTBEAT_PERSIST_MS so one missed write never shows "offline".
+const HEARTBEAT_PERSIST_MS = 40000;
+const ONLINE_WINDOW_MS = 100000;
+const DEVICE_MODES = ['normal', 'animation'];
 
 function json(data, status = 200, extra = {}) { return new Response(JSON.stringify(data), { status, headers: { ...JSON_HEADERS, ...extra } }); }
 function cors(request, response) {
@@ -68,11 +74,11 @@ async function recordFailureIndex(env, filename, reason) {
 }
 
 async function importAnimation(request, env) {
-  if (!(await requireAdmin(request, env))) return json({ error: 'Unauthorized' }, 401);
   const contentLength = Number(request.headers.get('Content-Length') || 0);
   if (contentLength > MAX_UPLOAD + 100_000) return json({ error: 'File too large. Maximum is 2 MB.' }, 413);
 
-  const form = await request.formData();
+  const form = await request.formData().catch(() => null);
+  if (!form) return json({ error: 'Upload must be multipart form data containing a .ino file.' }, 400);
   const file = form.get('file');
   if (!(file instanceof File)) return json({ error: 'Missing .ino file.' }, 400);
   if (!file.name.toLowerCase().endsWith('.ino')) return json({ error: 'Only .ino files are supported.' }, 400);
@@ -157,21 +163,43 @@ async function deviceCommand(request, env) {
   if (!(await requireDevice(request, env))) return json({ error: 'Unauthorized' }, 401);
   return json(await readState(env), 200, { 'Cache-Control': 'no-store' });
 }
+// Shared by /api/device/ack (animation mode) and /api/device/heartbeat (any mode).
+async function recordSeen(env, { mode, animationId = null }) {
+  const before = await readState(env);
+  const now = Date.now();
+  const requestedAnimation = typeof animationId === 'string' && animationId ? animationId : before.currentAnimationId || null;
+  const unchanged = before.currentAnimationId === requestedAnimation && (before.mode || 'unknown') === mode;
+  if (unchanged && (now - Number(before.lastSeenAt || 0)) < HEARTBEAT_PERSIST_MS) {
+    return { persisted: false, state: before };
+  }
+  await updateJson(env, DEVICE_STATE, current => ({ ...DEFAULT_STATE, ...current, currentAnimationId: requestedAnimation, mode, deviceOnline: true, lastSeenAt: now }), 'Update device heartbeat');
+  return { persisted: true, state: before };
+}
 async function deviceAck(request, env) {
   if (!(await requireDevice(request, env))) return json({ error: 'Unauthorized' }, 401);
   const body = await request.json().catch(() => ({}));
-  const before = await readState(env);
-  const now = Date.now();
-  const requestedAnimation = typeof body.animationId === 'string' && body.animationId ? body.animationId : before.currentAnimationId || null;
-  if ((now - Number(before.lastSeenAt || 0)) < 20000 && before.currentAnimationId === requestedAnimation) {
-    return json({ success: true, persisted: false });
-  }
-  await updateJson(env, DEVICE_STATE, current => ({ ...DEFAULT_STATE, ...current, currentAnimationId: requestedAnimation, deviceOnline: true, lastSeenAt: now }), 'Update device heartbeat');
-  return json({ success: true, persisted: true });
+  const { persisted } = await recordSeen(env, { mode: 'animation', animationId: body.animationId });
+  return json({ success: true, persisted });
+}
+async function deviceHeartbeat(request, env) {
+  if (!(await requireDevice(request, env))) return json({ error: 'Unauthorized' }, 401);
+  const body = await request.json().catch(() => ({}));
+  if (!DEVICE_MODES.includes(body.mode)) return json({ error: 'mode must be "normal" or "animation".' }, 400);
+  const { persisted, state } = await recordSeen(env, { mode: body.mode, animationId: body.animationId });
+  return json({ success: true, persisted, requestedMode: state.requestedMode || null, modeRequestId: Number(state.modeRequestId || 0) }, 200, { 'Cache-Control': 'no-store' });
+}
+// Website "Mode Change" button: records a one-shot request that the ESP32 picks up on its next heartbeat/command poll.
+async function requestMode(request, env) {
+  const body = await request.json().catch(() => ({}));
+  if (!DEVICE_MODES.includes(body.mode)) return json({ error: 'mode must be "normal" or "animation".' }, 400);
+  const state = await readState(env);
+  if (Date.now() - Number(state.lastSeenAt || 0) >= ONLINE_WINDOW_MS) return json({ error: 'ESP32 is offline, so the mode cannot be changed right now.' }, 409);
+  const requestId = Date.now();
+  await updateJson(env, DEVICE_STATE, current => ({ ...DEFAULT_STATE, ...current, requestedMode: body.mode, modeRequestId: requestId }), 'Request device mode change');
+  return json({ success: true, mode: body.mode, requestId });
 }
 
 async function commandFromAdmin(request, env, command, animationId = null, slideshow = false) {
-  if (!(await requireAdmin(request, env))) return json({ error: 'Unauthorized' }, 401);
   await updateJson(env, DEVICE_STATE, current => ({ ...DEFAULT_STATE, ...current, command, animationId, slideshow, updatedAt: Date.now() }), 'Update device command state');
   return json({ success: true });
 }
@@ -188,7 +216,7 @@ export default {
       // Must be matched before the /api/animations/:id pattern below, which would treat "stop" as an animation id.
       if (url.pathname === '/api/animations/stop' && request.method === 'POST') return cors(request, await commandFromAdmin(request, env, 'stop', null, false));
 
-      const match = url.pathname.match(/^\/api\/animations\/([^/]+)(?:\/(metadata|frames|play))?$/);
+      const match = url.pathname.match(/^\/api\/animations\/([^/]+)(?:\/(metadata|frames|play|preview))?$/);
       if (match) {
         const id = decodeURIComponent(match[1]);
         const action = match[2] || 'detail';
@@ -203,8 +231,10 @@ export default {
           const bytes = Uint8Array.from(atob(file.content), c => c.charCodeAt(0));
           return cors(request, new Response(bytes, { headers: { 'Content-Type': 'application/json', 'Cache-Control': 'public, max-age=60' } }));
         }
-        if (action === 'frames' && request.method === 'GET') {
-          if (!(await requireDevice(request, env))) return cors(request, json({ error: 'Unauthorized' }, 401));
+        // "preview" serves the same normalized frames.bin the ESP32 plays, but to the website (no device token) so it can
+        // draw thumbnails. The animation library is already publicly listable, so this exposes nothing new.
+        if ((action === 'frames' || action === 'preview') && request.method === 'GET') {
+          if (action === 'frames' && !(await requireDevice(request, env))) return cors(request, json({ error: 'Unauthorized' }, 401));
           const raw = await getFile(env, animationPath(id, 'frames.bin'), { raw: true });
           if (!raw) return cors(request, json({ error: 'Not found' }, 404));
           return cors(request, new Response(raw.body, { headers: { 'Content-Type': 'application/octet-stream', 'Cache-Control': 'public, max-age=31536000, immutable', 'Accept-Ranges': 'bytes' } }));
@@ -232,10 +262,12 @@ export default {
       if (url.pathname === '/api/device/command' && request.method === 'GET') return cors(request, await deviceCommand(request, env));
       if (url.pathname === '/api/device/status' && request.method === 'GET') {
         const state = await readState(env);
-        const online = Date.now() - Number(state.lastSeenAt || 0) < 30000;
-        return cors(request, json({ online, lastSeenAt: state.lastSeenAt || 0, command: state.command, animationId: state.animationId, currentAnimationId: state.currentAnimationId, slideshow: !!state.slideshow }));
+        const online = Date.now() - Number(state.lastSeenAt || 0) < ONLINE_WINDOW_MS;
+        return cors(request, json({ online, lastSeenAt: state.lastSeenAt || 0, serverTime: Date.now(), mode: online ? (state.mode || 'unknown') : 'unknown', requestedMode: state.requestedMode || null, modeRequestId: Number(state.modeRequestId || 0), command: state.command, animationId: state.animationId, currentAnimationId: state.currentAnimationId, slideshow: !!state.slideshow }, 200, { 'Cache-Control': 'no-store' }));
       }
       if (url.pathname === '/api/device/ack' && request.method === 'POST') return cors(request, await deviceAck(request, env));
+      if (url.pathname === '/api/device/heartbeat' && request.method === 'POST') return cors(request, await deviceHeartbeat(request, env));
+      if (url.pathname === '/api/device/mode' && request.method === 'POST') return cors(request, await requestMode(request, env));
 
       return cors(request, json({ error: 'Not found' }, 404));
     } catch (error) {

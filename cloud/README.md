@@ -156,7 +156,7 @@ Branch: main
 Folder: / (root)
 ```
 
-The site will serve `index.html` from the repository root. The included `app.js` defaults to the current Worker URL used for this project, but the URL can be changed in Connection settings.
+The site will serve `index.html` from the repository root. The Worker URL is the `API_BASE` constant at the top of `app.js` (edit that one line to point at a different Worker). The page has no settings panel and no admin code.
 
 ## Cloudflare Worker setup
 
@@ -196,7 +196,7 @@ cp .env.example .env     # then fill in the values
 
 | Variable | Used by | Where it ends up |
 | --- | --- | --- |
-| `ADMIN_TOKEN` | Worker, `scripts/api-test.mjs`, you (typed into the web page) | Cloudflare secret |
+| `ADMIN_TOKEN` | Worker, `scripts/api-test.mjs` (only guards `DELETE /api/animations/:id`; the website does not use it) | Cloudflare secret |
 | `DEVICE_TOKEN` | Worker, ESP32 | Cloudflare secret, firmware build |
 | `GITHUB_TOKEN` | Worker only | Cloudflare secret |
 | `OPENAI_API_KEY` | Worker only | Cloudflare secret |
@@ -214,7 +214,7 @@ cp .env.example .env     # then fill in the values
 `npm run check:secrets` confirms `.env`/`secrets.h`/`.dev.vars` are ignored and no secret value appears in any committable file.
 
 `GITHUB_TOKEN` and `OPENAI_API_KEY` exist only in `.env` (on your PC) and as Cloudflare secrets. They are never sent to the browser or the ESP32.
-The admin web page does not read `.env` (it is a static site): paste `ADMIN_TOKEN` into **Connection settings**; it is kept in `sessionStorage` only.
+The website is a static site and holds no tokens. Upload, play, stop, slideshow and mode change are intentionally public (no authentication).
 
 `OPENAI_MODEL`, `STORE_ORIGINAL_INO`, and the other non-secret values can be configured in `wrangler.toml` or the Worker environment. The provided config defaults to `gpt-5-mini` and does not enable original `.ino` storage.
 
@@ -236,6 +236,9 @@ GET  /api/import-failures
 GET  /api/device/status
 GET  /api/device/command
 POST /api/device/ack
+POST /api/device/heartbeat   (ESP32, any mode: liveness + pending mode request)
+POST /api/device/mode        (website Mode Change button)
+GET  /api/animations/:id/preview   (website thumbnails; same frames.bin the ESP32 plays)
 DELETE /api/animations/:id
 ```
 
@@ -279,7 +282,7 @@ V2 avoids this:
 
 - `/api/device/command` is read-only.
 - Browser commands write `device/state.json` only when a command changes.
-- `/api/device/ack` persists a heartbeat only when the previous heartbeat is stale or the current animation changes.
+- `/api/device/ack` and `/api/device/heartbeat` persist `lastSeenAt` only when it is older than 40 s or the mode/animation changed (each persist is one GitHub commit). The ESP32 counts as online while `lastSeenAt` is less than 100 s old.
 - The ESP32 can poll every second without generating a Git commit every second.
 
 ## Security
@@ -302,7 +305,7 @@ Implemented protections include:
 - device/admin token checks
 - no execution of uploaded Arduino code
 
-For a real public deployment, protect the admin website/API with an authentication layer such as Cloudflare Access. The simple `ADMIN_TOKEN` is intended for this standalone V1/V2 setup, not as a complete identity system.
+The website and its write routes are intentionally open: anyone who can reach the URL can upload animations (which can spend OpenAI credits), start/stop playback and switch the ESP32's mode. This is not authentication. If that becomes a problem, put the site and Worker behind an access layer such as Cloudflare Access.
 
 ## GitHub storage limits for this project
 
@@ -421,7 +424,7 @@ A fresh repository should return:
 {"animations":[]}
 ```
 
-Then open the GitHub Pages site, enter the Worker admin token in Connection settings, and upload `sample-eye.ino`. A successful import should create `animations/<id>/metadata.json`, `animations/<id>/frames.bin`, and update `animations.json`.
+Then open the GitHub Pages site, and upload `sample-eye.ino`. A successful import should create `animations/<id>/metadata.json`, `animations/<id>/frames.bin`, and update `animations.json`.
 
 ## Tests
 

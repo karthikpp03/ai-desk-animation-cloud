@@ -30,6 +30,7 @@ const size_t FRAME_BYTES = 1024;
 const uint16_t MAX_FRAMES = 600;
 const uint32_t COMMAND_POLL_MS = 1000;
 const uint32_t HEARTBEAT_MS = 15000;
+const uint32_t IDLE_HEARTBEAT_MS = 5000;  // normal (non-animation) mode: heartbeat + mode-request check
 const uint32_t HTTP_TIMEOUT_MS = 10000;
 const char* CACHE_FILE = "/animation.bin";
 const char* NEXT_FILE = "/next.bin";
@@ -56,12 +57,16 @@ volatile bool clearRequested = false;     // network task -> loop(): redraw the 
 volatile bool slideshowAdvance = false;   // loop() -> network task: one full loop finished
 volatile bool slideshowMode = false;      // network task -> loop()
 volatile bool playbackFailed = false;     // loop() -> network task: cache unreadable, reload it
+volatile int8_t modeRequest = -1;         // network task -> loop(): website Mode Change (-1 none, 1 enter, 0 leave)
 
 // ---- Owned by the network task -------------------------------------------------------------
 String currentAnimationId;
 String currentCommand = "stop";
 uint32_t lastCommandPoll = 0;
 uint32_t lastHeartbeat = 0;
+uint32_t lastIdleBeat = 0;
+double lastModeRequestId = 0;       // Date.now() stamp from the Worker; a NEW id means a new button press
+bool modeRequestIdKnown = false;    // first id seen after boot is only remembered, never acted on (it is stale)
 TaskHandle_t netTaskHandle = nullptr;
 
 // The animation currently sitting in /animation.bin. Survives leaving the mode, so re-entering
@@ -112,6 +117,41 @@ bool sendAck(const String& animationId) {
   int code = http.POST(body);
   http.end();
   return code >= 200 && code < 300;
+}
+
+// Reads the website's one-shot mode request out of a Worker response (heartbeat or command poll).
+void handleModeRequest(JsonDocument& doc) {
+  double id = doc["modeRequestId"] | 0.0;
+  const char* want = doc["requestedMode"] | "";
+  if (!modeRequestIdKnown) {
+    modeRequestIdKnown = true;
+    lastModeRequestId = id;
+    return;
+  }
+  if (id == lastModeRequestId) return;
+  lastModeRequestId = id;
+  if (!strcmp(want, "animation")) modeRequest = 1;
+  else if (!strcmp(want, "normal")) modeRequest = 0;
+}
+
+// Liveness ping that works in any mode. Tells the website which mode the ESP32 is in and returns any pending
+// mode request. (In animation mode with an animation loaded, sendAck() keeps doing this job as before.)
+bool sendHeartbeat(const char* mode) {
+  HTTPClient http;
+  http.setTimeout(HTTP_TIMEOUT_MS);
+  http.begin(String(API_BASE) + "/api/device/heartbeat");
+  http.addHeader("Content-Type", "application/json");
+  http.addHeader("X-Device-Token", DEVICE_TOKEN);
+  int code = http.POST(String("{\"mode\":\"") + mode + "\"}");
+  bool ok = code >= 200 && code < 300;
+  if (ok) {
+    JsonDocument doc;
+    if (!deserializeJson(doc, http.getString())) handleModeRequest(doc);
+  } else {
+    Serial.printf("Heartbeat failed: %d\n", code);
+  }
+  http.end();
+  return ok;
 }
 
 // Stops playback and asks loop() to redraw the OLED. Safe to call from the network task.
@@ -341,6 +381,8 @@ bool pollCommand(bool force = false) {
     return false;
   }
 
+  handleModeRequest(doc);  // website Mode Change while in animation mode (-> leave it)
+
   String requestedCommand = doc["command"] | "stop";
   String requestedId = doc["animationId"] | "";
   String previousCommand = currentCommand;
@@ -401,10 +443,19 @@ void slideshowTick() {
 }
 
 void heartbeatTick() {
-  if (!currentAnimationId.length()) return;
   if (millis() - lastHeartbeat < HEARTBEAT_MS) return;
   lastHeartbeat = millis();
-  sendAck(currentAnimationId);
+  if (currentAnimationId.length()) sendAck(currentAnimationId);
+  else sendHeartbeat("animation");  // nothing loaded yet: still tell the website the ESP32 is alive in this mode
+}
+
+// Normal AIDeskCompanion mode: one tiny request every few seconds. Never touches the OLED or any playback state.
+void idleHeartbeatTick() {
+  if (!API_BASE[0] || !DEVICE_TOKEN[0]) return;
+  if (WiFi.status() != WL_CONNECTED) return;
+  if (lastIdleBeat && millis() - lastIdleBeat < IDLE_HEARTBEAT_MS) return;
+  lastIdleBeat = millis();  // stamped before the request so a failing server is retried at the normal pace
+  sendHeartbeat("normal");
 }
 
 // Core 0: everything that can block on the network. Idle while Animation Display Mode is off.
@@ -412,7 +463,9 @@ void networkTask(void*) {
   bool wasActive = false;
   for (;;) {
     if (!modeActive) {
+      if (wasActive) lastIdleBeat = 0;  // just left animation mode: report "normal" right away
       wasActive = false;
+      idleHeartbeatTick();
       vTaskDelay(pdMS_TO_TICKS(100));
       continue;
     }
@@ -425,7 +478,7 @@ void networkTask(void*) {
       slideshowAdvance = false;
       playbackFailed = false;
       lastCommandPoll = 0;
-      lastHeartbeat = millis();
+      lastHeartbeat = millis() - HEARTBEAT_MS;  // report "animation" mode to the website right away
       netStatus = NS_STARTING;
       resumeCache();
     }
@@ -449,6 +502,13 @@ void networkTask(void*) {
     heartbeatTick();
     vTaskDelay(pdMS_TO_TICKS(20));
   }
+}
+
+// The network task is created once and then idles (or sends the light normal-mode heartbeat) until needed.
+void ensureNetworkTask() {
+  if (netTaskHandle) return;
+  // TLS + JSON need a big stack; pin to core 0 (with the Wi-Fi stack) so core 1 stays free for drawing.
+  xTaskCreatePinnedToCore(networkTask, "animNet", 20480, nullptr, 1, &netTaskHandle, 0);
 }
 
 void drawStatusScreen() {
@@ -489,10 +549,17 @@ void drawStatusScreen() {
 void CloudAnimationPlayer::begin(Adafruit_SSD1306 &d) {
   gDisp = &d;
   if (!stateMutex) stateMutex = xSemaphoreCreateMutex();
+  ensureNetworkTask();  // idle until Wi-Fi is up; only sends the normal-mode heartbeat so the website can see this device
 }
 
 bool CloudAnimationPlayer::isActive() const {
   return modeActive;
+}
+
+int8_t CloudAnimationPlayer::takeModeRequest() {
+  int8_t r = modeRequest;
+  if (r >= 0) modeRequest = -1;
+  return r;
 }
 
 void CloudAnimationPlayer::start() {
@@ -502,10 +569,7 @@ void CloudAnimationPlayer::start() {
   netStatus = NS_STARTING;
   modeActive = true;
 
-  if (!netTaskHandle) {
-    // TLS + JSON need a big stack; pin to core 0 (with the Wi-Fi stack) so core 1 stays free for drawing.
-    xTaskCreatePinnedToCore(networkTask, "animNet", 20480, nullptr, 1, &netTaskHandle, 0);
-  }
+  ensureNetworkTask();
 }
 
 void CloudAnimationPlayer::stop() {
@@ -587,5 +651,6 @@ void CloudAnimationPlayer::start() {}
 void CloudAnimationPlayer::stop() {}
 void CloudAnimationPlayer::update() {}
 bool CloudAnimationPlayer::isActive() const { return false; }
+int8_t CloudAnimationPlayer::takeModeRequest() { return -1; }
 
 #endif

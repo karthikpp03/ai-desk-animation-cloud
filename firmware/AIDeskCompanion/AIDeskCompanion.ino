@@ -183,6 +183,13 @@ void loop() {
     event = ButtonEvent::NONE;
   }
 #endif
+#if ENABLE_ANIMATION_MODE
+  // Website "Mode Change" button (arrives via the cloud network task; same switch as 4 quick presses).
+  const int8_t webModeRequest = cloudAnim.takeModeRequest();
+  if ((webModeRequest == 1 && !cloudAnim.isActive()) || (webModeRequest == 0 && cloudAnim.isActive())) {
+    toggleAnimationMode();
+  }
+#endif
   if (event == ButtonEvent::SHORT_PRESS) {
     screenMgr.handleShortPress();
   } else if (event == ButtonEvent::LONG_PRESS) {

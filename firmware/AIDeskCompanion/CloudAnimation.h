@@ -24,4 +24,8 @@ public:
   void update();                    // call every loop(); no-op unless active
 
   bool isActive() const;
+
+  // Mode Change button on the website: -1 = nothing pending, 1 = enter Animation Display Mode,
+  // 0 = leave it. One-shot (cleared when read). The caller (loop(), core 1) performs the switch.
+  int8_t takeModeRequest();
 };

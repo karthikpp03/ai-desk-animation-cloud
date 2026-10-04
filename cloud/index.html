@@ -21,6 +21,7 @@
       <label class="file-button">Upload .ino<input id="fileInput" type="file" accept=".ino,text/plain"></label>
       <button id="slideshowBtn">▶ Slideshow</button>
       <button id="stopBtn" class="secondary">■ Stop</button>
+      <button id="modeBtn" class="secondary" disabled title="Switch the ESP32 between normal mode and Animation Display Mode">⇄ Mode Change <span id="modeState" class="mode-state">…</span></button>
       <button id="refreshBtn" class="secondary">↻ Refresh</button>
       <span id="message"></span>
     </section>
@@ -36,13 +37,12 @@
       <div id="failures" class="failures"></div>
     </section>
 
-    <details class="settings card">
-      <summary>Connection settings</summary>
-      <label>Worker API URL<input id="apiBase" placeholder="https://your-worker.workers.dev"></label>
-      <label>Admin token<input id="adminToken" type="password" placeholder="Worker ADMIN_TOKEN"></label>
-      <button id="saveSettings">Save settings</button>
-      <p>The GitHub token and OpenAI key stay inside the Worker. This browser only needs the Worker URL and, for protected admin actions, the Worker admin token.</p>
-    </details>
+    <section>
+      <div class="section-head"><h2>Logs</h2><span><span id="logNote">recent events · stored in this browser</span> <button id="clearLogsBtn" class="link-button" type="button">Clear</button></span></div>
+      <div id="logs" class="logs card" role="log" aria-live="polite"></div>
+    </section>
+
+    <p class="footnote">This page is not password-protected: anyone who can open it can upload animations and control the display.</p>
   </main>
   <script src="app.js"></script>
 </body>

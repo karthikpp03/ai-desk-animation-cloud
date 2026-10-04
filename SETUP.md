@@ -43,7 +43,7 @@ nano .env                # fill in everything except API_BASE for now
 
 | Variable | What to put |
 |---|---|
-| `ADMIN_TOKEN` | random string you generated (you type it into the website) |
+| `ADMIN_TOKEN` | random string you generated (only guards `DELETE`; the website does not ask for it) |
 | `DEVICE_TOKEN` | a different random string (baked into the ESP32) |
 | `GITHUB_TOKEN` | the fine-grained token from step 1 |
 | `GITHUB_OWNER` / `GITHUB_REPO` / `GITHUB_BRANCH` | your GitHub username, the repo name, `main` |
@@ -89,7 +89,7 @@ npm run test:api                      # live check: 401 without a token, 200 wit
 
 ## 5. Add your first animation
 
-1. Open the website, expand **Connection settings**, enter the Worker URL and your `ADMIN_TOKEN`.
+1. Open the website (no login or settings needed).
 2. Upload `cloud/sample-eye.ino` (14-frame test animation). It should appear in the list.
 
 ## 6. Generate the firmware secrets
@@ -135,8 +135,8 @@ In Animation Display Mode, choose **Play** or **Slideshow** on the website. The 
 |---|---|
 | `npm ERR! package.json` | you are in the wrong folder; run npm commands inside `cloud/` |
 | `Missing in .env: ...` | fill that variable; values starting with `your`/`replace` are treated as empty |
-| Website says "Set the Worker API URL first" | enter the Worker URL in Connection settings |
-| Upload on the website returns 401 | `ADMIN_TOKEN` in the page differs from the one uploaded with `sync:secrets` |
+| Website cannot load animations / Logs show network errors | `API_BASE` at the top of `cloud/app.js` does not match your deployed Worker URL |
+| Website says "ESP32 Offline" although it is powered | re-flash the updated firmware (it now sends a heartbeat in normal mode too) and check `secrets.h` / Wi-Fi |
 | OLED says "No API config" | `secrets.h` is missing; run `npm run gen:firmware` and re-flash |
 | OLED says "Server unreachable" | wrong `API_BASE`, wrong `DEVICE_TOKEN`, or ESP32 not on Wi-Fi |
 | OLED says "Pick an animation on the website" | click Play or Slideshow on the website |
