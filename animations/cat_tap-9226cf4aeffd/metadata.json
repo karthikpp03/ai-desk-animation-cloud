@@ -1,0 +1,19 @@
+{
+  "id": "cat_tap-9226cf4aeffd",
+  "name": "cat_tap",
+  "originalFilename": "cat_tap.ino",
+  "width": 128,
+  "height": 64,
+  "monochrome": true,
+  "bitsPerPixel": 1,
+  "bytesPerFrame": 1024,
+  "frames": 3,
+  "fps": 14.925,
+  "frameDurationMs": 67,
+  "loop": true,
+  "format": "raw-ssd1306-row-major-1bpp-v1",
+  "timingSource": "millis() interval",
+  "sourceSha256": "9226cf4aeffd7680cbbf7362cafd606a2869925be94625ebef7731fb464809c6",
+  "importedAt": "2026-10-04T14:13:11.368Z",
+  "parser": "deterministic"
+}
