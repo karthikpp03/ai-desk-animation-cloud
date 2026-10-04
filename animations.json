@@ -1,0 +1,19 @@
+{
+  "version": 1,
+  "animations": [
+    {
+      "id": "alone-9d9f63b46ddb",
+      "name": "alone",
+      "originalFilename": "alone.ino",
+      "width": 128,
+      "height": 64,
+      "frames": 65,
+      "fps": 12.987,
+      "frameDurationMs": 77,
+      "loop": true,
+      "format": "raw-ssd1306-row-major-1bpp-v1",
+      "sourceSha256": "9d9f63b46ddbc5f9e256eb744569c1c2dc28d5defc14eddb30da107f6b11ed18",
+      "parser": "deterministic"
+    }
+  ]
+}
