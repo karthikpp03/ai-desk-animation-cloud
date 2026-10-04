@@ -84,6 +84,20 @@
       "format": "raw-ssd1306-row-major-1bpp-v1",
       "sourceSha256": "9226cf4aeffd7680cbbf7362cafd606a2869925be94625ebef7731fb464809c6",
       "parser": "deterministic"
+    },
+    {
+      "id": "coupled-1aedaea42ae5",
+      "name": "coupled",
+      "originalFilename": "coupled.ino",
+      "width": 128,
+      "height": 64,
+      "frames": 259,
+      "fps": 3.145,
+      "frameDurationMs": 318,
+      "loop": true,
+      "format": "raw-ssd1306-row-major-1bpp-v1",
+      "sourceSha256": "1aedaea42ae5ce9f8a0c331fec32c3be40ff1a860371389c1da8d86145d557f8",
+      "parser": "deterministic"
     }
   ]
 }
