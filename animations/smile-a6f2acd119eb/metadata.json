@@ -1,0 +1,19 @@
+{
+  "id": "smile-a6f2acd119eb",
+  "name": "smile",
+  "originalFilename": "smile.ino",
+  "width": 128,
+  "height": 64,
+  "monochrome": true,
+  "bitsPerPixel": 1,
+  "bytesPerFrame": 1024,
+  "frames": 25,
+  "fps": 14.925,
+  "frameDurationMs": 67,
+  "loop": true,
+  "format": "raw-ssd1306-row-major-1bpp-v1",
+  "timingSource": "millis() interval",
+  "sourceSha256": "a6f2acd119eb6d25070188d7c9f1a0093ce874f87f406187fa870c0f1cd3c13b",
+  "importedAt": "2026-10-04T14:33:23.924Z",
+  "parser": "deterministic"
+}
