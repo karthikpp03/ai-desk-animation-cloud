@@ -182,6 +182,20 @@
       "format": "raw-ssd1306-row-major-1bpp-v1",
       "sourceSha256": "f000152eed87dc90acc293c6d08ca258b3e9cb48446dcc24ab35f1a7994dea25",
       "parser": "deterministic"
+    },
+    {
+      "id": "ouple_luv-0e6b37eed13e",
+      "name": "ouple_luv",
+      "originalFilename": "ouple_luv.ino",
+      "width": 128,
+      "height": 64,
+      "frames": 1,
+      "fps": 10,
+      "frameDurationMs": 100,
+      "loop": false,
+      "format": "raw-ssd1306-row-major-1bpp-v1",
+      "sourceSha256": "0e6b37eed13ed4130ffedf5855591a7808e3dc3dc7b4cc0a0028ff9006fda7f2",
+      "parser": "deterministic"
     }
   ]
 }
