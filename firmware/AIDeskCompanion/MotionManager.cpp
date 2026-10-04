@@ -22,7 +22,7 @@ MotionManager::MotionManager(AnimationManager &a, BuzzerManager &b,
     lastShakeMs(0), lastWakeMs(0), lastPickupMs(0), lastLandingMs(0),
     shakePeakCount(0), shakePeakWindowStart(0), shakeBurstCount(0), shakeBurstWindowStart(0),
     liftCandidate(false), liftCandidateStart(0), liftMotionSeen(false), carried(false),
-    tiltOccurred(false), lastTilt(-1) {}
+    tiltOccurred(false), rapidMotionSamples(0), lastTilt(-1) {}
 
 bool MotionManager::writeRegister(uint8_t reg, uint8_t value) {
   Wire.beginTransmission(MPU6050_ADDRESS);
@@ -267,6 +267,21 @@ void MotionManager::handleMotion() {
   float dynamicZ = fabsf(az - 1.0f);
   prevZ = az;
 
+  // Release detection must NOT depend on the near-gravity window. During
+  // a real release the filtered acceleration can briefly be outside 0.82-1.20g,
+  // which previously left lastTilt latched and prevented later tilt events.
+  bool tiltReleased = fabsf(tiltFB) <= MOTION_TILT_RELEASE_DEG &&
+                      fabsf(tiltLR) <= MOTION_TILT_RELEASE_DEG;
+  if (tiltReleased && tiltOccurred && !liftCandidate && !carried) {
+    tiltOccurred = false;
+    lastTilt = -1;
+    lastTiltMs = now;
+    animation.reactMotionStupid();
+  } else if (tiltReleased && lastTilt != -1 && !liftCandidate && !carried) {
+    lastTilt = -1;
+    lastTiltMs = now;
+  }
+
   // ---------------------------------------------------------------
   // Pickup/landing owns vertical movement. This is intentionally before
   // generic shock/rotation so lifting the box cannot become "dizzy".
@@ -300,6 +315,30 @@ void MotionManager::handleMotion() {
   // A carried box landing is a vertical impact, not a generic shock.
   if (carried && accelMag >= MOTION_LANDING_ACCEL_G && dynamicZ > MOTION_LANDING_DYNAMIC_Z_G) {
     triggerLanding();
+    return;
+  }
+
+  // ---------------------------------------------------------------
+  // Rapid shake / roll / rotation. Use a short consecutive-sample gate so
+  // one noisy IMU sample cannot trigger Dizzy, while fast physical movement
+  // does not depend on the slower multi-peak shake counter below.
+  // ---------------------------------------------------------------
+  bool rapidMotion = !liftCandidate && !carried &&
+                      (gyroMag >= MOTION_DIZZY_DIRECT_GYRO_DPS ||
+                       (gyroMag >= MOTION_DIZZY_DIRECT_MIN_GYRO_DPS &&
+                        dynamicAccel >= MOTION_DIZZY_DIRECT_ACCEL_G));
+  if (rapidMotion) {
+    if (rapidMotionSamples < MOTION_DIZZY_DIRECT_SAMPLES) rapidMotionSamples++;
+  } else {
+    rapidMotionSamples = 0;
+  }
+
+  if (rapidMotionSamples >= MOTION_DIZZY_DIRECT_SAMPLES) {
+    if (cooldownPassed(lastRotationMs, MOTION_ROTATION_COOLDOWN_MS)) {
+      lastRotationMs = now;
+      rapidMotionSamples = 0;
+      triggerShock(true);
+    }
     return;
   }
 
@@ -386,12 +425,6 @@ void MotionManager::handleMotion() {
                      ? (tiltFB > 0 ? 1 : 0)
                      : (tiltLR > 0 ? 2 : 3);
       if (lastTilt != dir) triggerTilt(dir);
-    } else if (fabsf(tiltFB) <= MOTION_TILT_RELEASE_DEG && fabsf(tiltLR) <= MOTION_TILT_RELEASE_DEG) {
-      if (tiltOccurred) {
-        tiltOccurred = false;
-        animation.reactMotionStupid();
-      }
-      lastTilt = -1;
     }
   }
 }

@@ -228,6 +228,12 @@
 // Rotation: strong gyro + acceleration evidence; avoids touch/pickup false positives.
 #define MOTION_SUDDEN_GYRO_DPS 230.0f
 #define MOTION_DIZZY_GYRO_DPS 330.0f
+// Fast physical shake/roll gate: requires ~60 ms of consecutive strong motion.
+// High enough to ignore ordinary tilting, but less dependent on a single 330 dps peak.
+#define MOTION_DIZZY_DIRECT_GYRO_DPS 280.0f
+#define MOTION_DIZZY_DIRECT_MIN_GYRO_DPS 210.0f
+#define MOTION_DIZZY_DIRECT_ACCEL_G 0.45f
+#define MOTION_DIZZY_DIRECT_SAMPLES 3
 #define MOTION_ROTATION_ACCEL_G 0.55f
 #define MOTION_ROTATION_DELTA_G 0.55f
 #define MOTION_ROTATION_COOLDOWN_MS 1500UL
