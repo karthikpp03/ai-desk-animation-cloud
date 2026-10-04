@@ -112,6 +112,20 @@
       "format": "raw-ssd1306-row-major-1bpp-v1",
       "sourceSha256": "7a575e36efc5a9c44c5bbaa2086e12451d48c9a037ea7ab497f0b7185cd9cf2a",
       "parser": "deterministic"
+    },
+    {
+      "id": "hug-81b27a5ab71b",
+      "name": "hug",
+      "originalFilename": "hug.ino",
+      "width": 128,
+      "height": 64,
+      "frames": 75,
+      "fps": 14.925,
+      "frameDurationMs": 67,
+      "loop": true,
+      "format": "raw-ssd1306-row-major-1bpp-v1",
+      "sourceSha256": "81b27a5ab71b36d1df103455c90bfd4ac7a6dbe02948ebfe09b12049a2840a68",
+      "parser": "deterministic"
     }
   ]
 }
