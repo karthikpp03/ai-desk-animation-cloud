@@ -175,6 +175,10 @@ void MotionManager::triggerShake(uint8_t level) {
   if (earMgr.isEnabled()) earMgr.reactMotionShake(reactionLevel >= 3);
 
   if (reactionLevel >= 3) {
+    // Level-3 shake is the actual rapid-shake/roll event. Route it to the
+    // supplied full-frame Dizzy animation instead of the old expression-only
+    // shake reaction.
+    animation.reactMotionDizzy();
     buzzer.beepMotionDizzy();
     if (ledMgr.isEnabled()) ledMgr.playMotionShake(true);
   } else {
@@ -185,8 +189,15 @@ void MotionManager::triggerShake(uint8_t level) {
 
 void MotionManager::triggerTilt(int8_t dir) {
   unsigned long now = millis();
-  if (!cooldownPassed(lastTiltMs, MOTION_TILT_COOLDOWN_MS)) return;
-  lastTiltMs = now;
+  // A tilt that has already been released is a fresh physical event. Do not
+  // let the previous tilt's cooldown swallow that next event.
+  if (lastTilt == -1) {
+    lastTiltMs = now;
+  } else if (!cooldownPassed(lastTiltMs, MOTION_TILT_COOLDOWN_MS)) {
+    return;
+  } else {
+    lastTiltMs = now;
+  }
   lastTilt = dir;
   tiltOccurred = true;
 
@@ -296,8 +307,10 @@ void MotionManager::handleMotion() {
   // Real rotation: require a stronger gyro burst and a little acceleration
   // evidence. This prevents hand pickup/touch from being classified as dizzy.
   // ---------------------------------------------------------------
-  bool suddenRotation = gyroMag >= MOTION_SUDDEN_GYRO_DPS &&
-                        (dynamicAccel > MOTION_ROTATION_ACCEL_G || deltaAccel > MOTION_ROTATION_DELTA_G);
+  bool suddenRotation =
+      (gyroMag >= MOTION_DIZZY_GYRO_DPS) ||
+      (gyroMag >= MOTION_SUDDEN_GYRO_DPS &&
+       (dynamicAccel > MOTION_ROTATION_ACCEL_G || deltaAccel > MOTION_ROTATION_DELTA_G));
   if (suddenRotation && !liftCandidate && !carried) {
     if (cooldownPassed(lastRotationMs, MOTION_ROTATION_COOLDOWN_MS)) {
       lastRotationMs = now;
