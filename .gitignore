@@ -3,4 +3,4 @@
 secrets.h
 node_modules/
 .wrangler/
-cloud/animations/
+template/
