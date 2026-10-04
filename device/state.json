@@ -7,6 +7,6 @@
   "deviceOnline": true,
   "lastSeenAt": 1791120076076,
   "mode": "normal",
-  "requestedMode": "normal",
-  "modeRequestId": 1791120073851
+  "requestedMode": "animation",
+  "modeRequestId": 1791120081851
 }
