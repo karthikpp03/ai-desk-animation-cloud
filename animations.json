@@ -14,6 +14,20 @@
       "format": "raw-ssd1306-row-major-1bpp-v1",
       "sourceSha256": "9d9f63b46ddbc5f9e256eb744569c1c2dc28d5defc14eddb30da107f6b11ed18",
       "parser": "deterministic"
+    },
+    {
+      "id": "anime-2b8dc51f53a5",
+      "name": "anime",
+      "originalFilename": "anime.ino",
+      "width": 128,
+      "height": 64,
+      "frames": 18,
+      "fps": 14.925,
+      "frameDurationMs": 67,
+      "loop": true,
+      "format": "raw-ssd1306-row-major-1bpp-v1",
+      "sourceSha256": "2b8dc51f53a5be4509854af74f84d44634ae1db8cc778bf52643c7399dc3de65",
+      "parser": "deterministic"
     }
   ]
 }
