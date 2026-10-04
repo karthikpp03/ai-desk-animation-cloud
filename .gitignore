@@ -1,0 +1,6 @@
+.env
+.dev.vars
+secrets.h
+node_modules/
+.wrangler/
+cloud/animations/

@@ -1,0 +1,25 @@
+cd ~/Downloads   # keep your old copy as a backup
+unzip ~/Downloads/animation-cloud-full.zip   # adjust the path if the zip is elsewhere
+cd animation-cloud
+npm install
+cp .env.example .env
+nano .env                                    # fill in all values, then save
+npm run test:parser && npm run test:worker && npm run check:secrets
+
+
+
+npm run sync:secrets -- --dry-run   # lists names only
+npm run sync:secrets                # uploads the secrets
+npx wrangler deploy                 # deploys the Stop-route fix
+npm run test:api                    # live check of the 401/200 behaviour
+
+Run npm run gen:firmware. It creates secrets.h next to the sketch.
+
+Open esp32/animation_client/animation_client.ino in the Arduino IDE.
+Compile and upload. This is the first compile of the new firmware, so tell me any errors and I'll fix them.
+Open the Serial monitor at 115200 baud.
+
+
+admin token openssl rand -hex 32
+device token openssl rand -hex 32
+API_BASE=https://ai-desk-animation-api.zeus-karthik11.workers.dev
