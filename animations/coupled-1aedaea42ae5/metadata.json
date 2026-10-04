@@ -1,0 +1,19 @@
+{
+  "id": "coupled-1aedaea42ae5",
+  "name": "coupled",
+  "originalFilename": "coupled.ino",
+  "width": 128,
+  "height": 64,
+  "monochrome": true,
+  "bitsPerPixel": 1,
+  "bytesPerFrame": 1024,
+  "frames": 259,
+  "fps": 3.145,
+  "frameDurationMs": 318,
+  "loop": true,
+  "format": "raw-ssd1306-row-major-1bpp-v1",
+  "timingSource": "millis() interval",
+  "sourceSha256": "1aedaea42ae5ce9f8a0c331fec32c3be40ff1a860371389c1da8d86145d557f8",
+  "importedAt": "2026-10-04T14:13:41.895Z",
+  "parser": "deterministic"
+}
