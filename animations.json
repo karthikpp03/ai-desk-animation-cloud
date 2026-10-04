@@ -154,6 +154,20 @@
       "format": "raw-ssd1306-row-major-1bpp-v1",
       "sourceSha256": "5b9dba7d90759cb04cc88a702a75998f836f5ea86382f7d63e290a2ee0e6bc8f",
       "parser": "deterministic"
+    },
+    {
+      "id": "oled_display-8812afadff53",
+      "name": "oled_display",
+      "originalFilename": "oled_display.ino",
+      "width": 128,
+      "height": 64,
+      "frames": 106,
+      "fps": 14.925,
+      "frameDurationMs": 67,
+      "loop": true,
+      "format": "raw-ssd1306-row-major-1bpp-v1",
+      "sourceSha256": "8812afadff53aaac16c6df0e91063d97c0e7e7f1ace422b0fbae13691a7396c8",
+      "parser": "deterministic"
     }
   ]
 }
