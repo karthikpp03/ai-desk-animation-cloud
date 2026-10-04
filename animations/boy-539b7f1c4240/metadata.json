@@ -1,0 +1,19 @@
+{
+  "id": "boy-539b7f1c4240",
+  "name": "boy",
+  "originalFilename": "boy.ino",
+  "width": 128,
+  "height": 64,
+  "monochrome": true,
+  "bitsPerPixel": 1,
+  "bytesPerFrame": 1024,
+  "frames": 150,
+  "fps": 11.364,
+  "frameDurationMs": 88,
+  "loop": true,
+  "format": "raw-ssd1306-row-major-1bpp-v1",
+  "timingSource": "millis() interval",
+  "sourceSha256": "539b7f1c4240a056bfce0dcc0f05648c268c35d91357f79cbc15ad570c25dc54",
+  "importedAt": "2026-10-04T16:45:37.475Z",
+  "parser": "deterministic"
+}
