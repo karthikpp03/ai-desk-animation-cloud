@@ -61,7 +61,7 @@ git init
 git branch -M main
 git add .
 git commit -m "Initial animation cloud"
-git remote add origin https://github.com/YOUR_USER/YOUR_REPO.git
+git remote add origin https://github.com/karthikpp03/ai-desk-animation-cloud.git
 git push -u origin main
 npm run check:secrets      # must say "No secrets found in tracked files"
 ```
