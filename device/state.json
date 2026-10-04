@@ -1,8 +1,8 @@
 {
-  "command": "slideshow",
-  "animationId": null,
-  "slideshow": true,
-  "updatedAt": 1791133762680,
+  "command": "play",
+  "animationId": "face-a3a9fe0895be",
+  "slideshow": false,
+  "updatedAt": 1791133864080,
   "currentAnimationId": "lala-34152f955cf6",
   "deviceOnline": true,
   "lastSeenAt": 1791133840111,
