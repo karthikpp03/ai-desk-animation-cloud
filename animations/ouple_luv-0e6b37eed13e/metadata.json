@@ -1,0 +1,19 @@
+{
+  "id": "ouple_luv-0e6b37eed13e",
+  "name": "ouple_luv",
+  "originalFilename": "ouple_luv.ino",
+  "width": 128,
+  "height": 64,
+  "monochrome": true,
+  "bitsPerPixel": 1,
+  "bytesPerFrame": 1024,
+  "frames": 1,
+  "fps": 10,
+  "frameDurationMs": 100,
+  "loop": false,
+  "format": "raw-ssd1306-row-major-1bpp-v1",
+  "timingSource": "default (100 ms - no timing found in source)",
+  "sourceSha256": "0e6b37eed13ed4130ffedf5855591a7808e3dc3dc7b4cc0a0028ff9006fda7f2",
+  "importedAt": "2026-10-04T14:15:41.072Z",
+  "parser": "deterministic"
+}
