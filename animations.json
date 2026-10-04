@@ -16,6 +16,20 @@
       "parser": "deterministic"
     },
     {
+      "id": "alone2-117356584997",
+      "name": "alone2",
+      "originalFilename": "alone2.ino",
+      "width": 128,
+      "height": 64,
+      "frames": 25,
+      "fps": 14.925,
+      "frameDurationMs": 67,
+      "loop": true,
+      "format": "raw-ssd1306-row-major-1bpp-v1",
+      "sourceSha256": "1173565849973ba5faa2fc94986e99904cd2e1e7ef972cd3054ceb93730f8239",
+      "parser": "deterministic"
+    },
+    {
       "id": "anime-2b8dc51f53a5",
       "name": "anime",
       "originalFilename": "anime.ino",
