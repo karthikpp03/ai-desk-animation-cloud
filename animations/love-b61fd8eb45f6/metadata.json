@@ -1,0 +1,19 @@
+{
+  "id": "love-b61fd8eb45f6",
+  "name": "love",
+  "originalFilename": "love.ino",
+  "width": 128,
+  "height": 64,
+  "monochrome": true,
+  "bitsPerPixel": 1,
+  "bytesPerFrame": 1024,
+  "frames": 1,
+  "fps": 10,
+  "frameDurationMs": 100,
+  "loop": false,
+  "format": "raw-ssd1306-row-major-1bpp-v1",
+  "timingSource": "default (100 ms - no timing found in source)",
+  "sourceSha256": "b61fd8eb45f699387b6b7211257a942db4b7d5a4698a50e2c4e7d28af1a5ed11",
+  "importedAt": "2026-10-04T14:14:32.640Z",
+  "parser": "deterministic"
+}
