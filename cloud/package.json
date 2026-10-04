@@ -1,0 +1,19 @@
+{
+  "name": "ai-desk-animation-cloud",
+  "private": true,
+  "scripts": {
+    "dev": "wrangler dev",
+    "deploy": "wrangler deploy",
+    "gen:firmware": "node scripts/gen-firmware-secrets.mjs",
+    "gen:devvars": "node scripts/gen-dev-vars.mjs",
+    "sync:secrets": "node scripts/sync-secrets.mjs",
+    "check:secrets": "node scripts/check-secrets.mjs",
+    "test:parser": "node scripts/test-parser.mjs",
+    "test:worker": "node scripts/test-worker-local.mjs",
+    "test:api": "node scripts/api-test.mjs auth"
+  },
+  "devDependencies": {
+    "wrangler": "latest"
+  },
+  "type": "module"
+}

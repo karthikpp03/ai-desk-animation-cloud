@@ -1,0 +1,15 @@
+name = "ai-desk-animation-api"
+main = "worker/index.js"
+compatibility_date = "2026-10-02"
+
+[vars]
+OPENAI_MODEL = "gpt-5-mini"
+STORE_ORIGINAL_INO = "false"
+# Configure these as Worker secrets/environment values before deployment:
+# ADMIN_TOKEN
+# DEVICE_TOKEN
+# OPENAI_API_KEY
+# GITHUB_TOKEN
+# GITHUB_OWNER
+# GITHUB_REPO
+# GITHUB_BRANCH

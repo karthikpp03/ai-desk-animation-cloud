@@ -1,0 +1,49 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>AI Desk Companion — Animation Cloud</title>
+  <link rel="stylesheet" href="style.css">
+</head>
+<body>
+  <main class="shell">
+    <header>
+      <div>
+        <p class="eyebrow">AI DESK COMPANION</p>
+        <h1>Animation Cloud</h1>
+        <p class="sub">Upload Arduino animations → normalize → store in GitHub → play on the OLED.</p>
+      </div>
+      <div class="status"><span id="dot"></span><span id="deviceStatus">Checking ESP32…</span></div>
+    </header>
+
+    <section class="toolbar card">
+      <label class="file-button">Upload .ino<input id="fileInput" type="file" accept=".ino,text/plain"></label>
+      <button id="slideshowBtn">▶ Slideshow</button>
+      <button id="stopBtn" class="secondary">■ Stop</button>
+      <button id="refreshBtn" class="secondary">↻ Refresh</button>
+      <span id="message"></span>
+    </section>
+
+    <section>
+      <div class="section-head"><h2>Animations</h2><span id="count"></span></div>
+      <div id="animations" class="grid"></div>
+      <div id="empty" class="empty card">No animations yet. Upload your first <code>.ino</code>.</div>
+    </section>
+
+    <section>
+      <div class="section-head"><h2>Failed imports</h2><span>latest 50</span></div>
+      <div id="failures" class="failures"></div>
+    </section>
+
+    <details class="settings card">
+      <summary>Connection settings</summary>
+      <label>Worker API URL<input id="apiBase" placeholder="https://your-worker.workers.dev"></label>
+      <label>Admin token<input id="adminToken" type="password" placeholder="Worker ADMIN_TOKEN"></label>
+      <button id="saveSettings">Save settings</button>
+      <p>The GitHub token and OpenAI key stay inside the Worker. This browser only needs the Worker URL and, for protected admin actions, the Worker admin token.</p>
+    </details>
+  </main>
+  <script src="app.js"></script>
+</body>
+</html>

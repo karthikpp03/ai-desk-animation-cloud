@@ -1,0 +1,15 @@
+{
+  "id": "sample-eye",
+  "name": "eye",
+  "originalFilename": "eye.ino",
+  "width": 128,
+  "height": 64,
+  "monochrome": true,
+  "bitsPerPixel": 1,
+  "bytesPerFrame": 1024,
+  "frames": 14,
+  "fps": 10,
+  "frameDurationMs": 100,
+  "loop": true,
+  "format": "raw-ssd1306-row-major-1bpp-v1"
+}

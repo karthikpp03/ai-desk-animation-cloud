@@ -1,0 +1,9 @@
+node_modules/
+.wrangler/
+.dev.vars
+.env
+.env.*
+!.env.example
+esp32/animation_client/secrets.h
+
+animations/*.ino

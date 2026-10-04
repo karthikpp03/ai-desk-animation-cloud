@@ -1,0 +1,10 @@
+# `wrangler dev` reads .dev.vars. Do not fill this in by hand: run `npm run gen:devvars`
+# to generate it from .env. Names only, no real values:
+ADMIN_TOKEN=
+DEVICE_TOKEN=
+GITHUB_TOKEN=
+GITHUB_OWNER=
+GITHUB_REPO=
+GITHUB_BRANCH=
+OPENAI_API_KEY=
+OPENAI_MODEL=gpt-5-mini
