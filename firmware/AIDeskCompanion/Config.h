@@ -204,6 +204,9 @@
 #define MPU6050_ADDRESS 0x68
 #define MPU6050_INT_PIN 23
 #define MOTION_ENABLED true
+// Serial (115200) log of motion state changes, for diagnosing latched states.
+// Set to 0 to silence once everything behaves.
+#define MOTION_DEBUG 1
 #define MOTION_UPDATE_INTERVAL_MS 20UL
 #define MOTION_ACCEL_FILTER_ALPHA 0.18f
 #define MOTION_GYRO_FILTER_ALPHA 0.16f
@@ -249,6 +252,35 @@
 #define MOTION_SHAKE_BURST_WINDOW_MS 4200UL
 #define MOTION_SHAKE_COOLDOWN_MS 900UL
 #define MOTION_SHAKE_DIZZY_GYRO_DPS 300.0f
+
+// Dizzy detector (bug fix). Works on RAW (unfiltered) samples because the
+// 0.16 gyro low-pass flattens back-and-forth shakes to a fraction of their
+// real speed. Each strong raw sample adds to a leaky score; Dizzy fires only
+// when strong motion is *sustained*, so single flicks, taps and ordinary
+// tilting never reach it.
+#define MOTION_DIZZY_RAW_GYRO_DPS 220.0f
+#define MOTION_DIZZY_RAW_ACCEL_G 0.9f
+#define MOTION_DIZZY_SCORE_UP 2.0f
+#define MOTION_DIZZY_SCORE_DOWN 1.0f
+#define MOTION_DIZZY_SCORE_MAX 30.0f
+#define MOTION_DIZZY_SCORE_BUSY 10.0f
+#define MOTION_DIZZY_SCORE_TRIGGER 16.0f
+#define MOTION_DIZZY_HOLDOFF_MS 500UL
+
+// Tilt-return detection (bug fix): a tilt counts as "returned to normal" when
+// the box is back inside the release band, OR has stopped moving below the
+// tilt-start angle (a hand rarely sets it back within 9 deg exactly).
+#define MOTION_TILT_SETTLE_MS 350UL
+#define MOTION_TILT_SETTLE_GYRO_DPS 25.0f
+// The returned state must hold briefly, so a shake passing through "level"
+// cannot fire Stupid right before Dizzy.
+#define MOTION_TILT_RELEASE_HOLD_MS 120UL
+
+// A carried (picked-up) box that has been resting level and still is no
+// longer "carried"; otherwise tilt/Stupid stay blocked until a hard landing.
+#define MOTION_CARRIED_REST_MS 2500UL
+#define MOTION_CARRIED_REST_GYRO_DPS 12.0f
+#define MOTION_CARRIED_REST_ACCEL_G 0.05f
 
 // Vertical Z is used primarily for pickup / landing / impact, not as a tilt.
 #define MOTION_PICKUP_ACCEL_G 0.38f

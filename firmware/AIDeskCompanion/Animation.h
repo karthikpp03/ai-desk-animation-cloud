@@ -99,6 +99,7 @@ public:
   // but return control to the existing normal animation automatically.
   void reactMotionIdiot();
   void reactMotionStupid();
+  void cancelMotionStupid(); // ends a still-playing Stupid so a new tilt can show its eye movement
   bool isBitmapAnimationActive() const;
   void drawBitmapAnimation(Adafruit_SSD1306 &display);
   void reactMotionWake();

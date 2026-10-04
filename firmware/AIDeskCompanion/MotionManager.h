@@ -31,7 +31,7 @@ private:
   bool sensorOK;
   unsigned long lastReadMs;
   float ax, ay, az, gx, gy, gz;
-  float accelMag, gyroMag, accelRawMag, prevAccelMag, prevZ;
+  float accelMag, gyroMag, accelRawMag, gyroRawMag, prevAccelMag, prevZ;
   float accelBaseline, gyroBaseline;
 
   unsigned long lastTapMs, lastTiltMs, lastShockMs, lastRotationMs;
@@ -48,6 +48,11 @@ private:
   bool carried;
   bool tiltOccurred;
   uint8_t rapidMotionSamples;
+  float dizzyScore;                 // leaky sustained-strong-motion score
+  unsigned long lastDizzyMs;        // 0 = never
+  unsigned long tiltSettleStart;    // 0 = not settling
+  unsigned long tiltReleaseStart;   // 0 = not in returned state
+  unsigned long carriedRestStart;   // 0 = not resting
   int8_t lastTilt; // -1 none, 0 front, 1 back, 2 left, 3 right, 4 excessive
 
   bool readSensor();
@@ -61,6 +66,10 @@ private:
   void triggerTap();
   void triggerShock(bool rotation);
   void triggerShake(uint8_t level);
+  void triggerDizzy();
+  uint16_t dbgKey;
+  unsigned long dbgLastMs;
+  void debugState(bool dizzyHoldoff, bool violent, float tiltFB, float tiltLR);
   void triggerTilt(int8_t dir);
   void triggerPickup();
   void triggerLanding();

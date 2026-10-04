@@ -304,6 +304,18 @@ void AnimationManager::reactMotionStupid() {
   startBitmapAnimation(BitmapAnimation::STUPID, 3, MOTION_STUPID_DURATION_MS, 100);
 }
 
+void AnimationManager::cancelMotionStupid() {
+  if (bitmapAnimation != BitmapAnimation::STUPID) return;
+  // Same hand-back-to-normal path used when a bitmap animation expires.
+  bitmapAnimation = BitmapAnimation::NONE;
+  bitmapPriority = 255;
+  seqBusy = false;
+  activePriority = AnimPriority::IDLE;
+  character.setExpression(Expression::NORMAL, 0);
+  scheduleNextIdleChange();
+  scheduleNextMicro();
+}
+
 void AnimationManager::reactMotionDizzy() {
   startBitmapAnimation(BitmapAnimation::DIZZY, 1, MOTION_DIZZY_DURATION_MS, 50);
 }
