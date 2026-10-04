@@ -1,0 +1,19 @@
+{
+  "id": "anime-2b8dc51f53a5",
+  "name": "anime",
+  "originalFilename": "anime.ino",
+  "width": 128,
+  "height": 64,
+  "monochrome": true,
+  "bitsPerPixel": 1,
+  "bytesPerFrame": 1024,
+  "frames": 18,
+  "fps": 14.925,
+  "frameDurationMs": 67,
+  "loop": true,
+  "format": "raw-ssd1306-row-major-1bpp-v1",
+  "timingSource": "millis() interval",
+  "sourceSha256": "2b8dc51f53a5be4509854af74f84d44634ae1db8cc778bf52643c7399dc3de65",
+  "importedAt": "2026-10-04T12:54:25.571Z",
+  "parser": "deterministic"
+}
