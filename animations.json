@@ -56,6 +56,20 @@
       "format": "raw-ssd1306-row-major-1bpp-v1",
       "sourceSha256": "ef7ad86383398d14541439a7450d1c7fa95e7a03a335684940c9c310798cd955",
       "parser": "deterministic"
+    },
+    {
+      "id": "cat-c37917344f6c",
+      "name": "cat",
+      "originalFilename": "cat.ino",
+      "width": 128,
+      "height": 64,
+      "frames": 45,
+      "fps": 14.925,
+      "frameDurationMs": 67,
+      "loop": true,
+      "format": "raw-ssd1306-row-major-1bpp-v1",
+      "sourceSha256": "c37917344f6ce2dbf431da7b9bf95818fd4465435d37171ed044ea6db1445e8a",
+      "parser": "deterministic"
     }
   ]
 }
