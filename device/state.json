@@ -5,15 +5,15 @@
   "updatedAt": 1791136560623,
   "currentAnimationId": "oled_display_1-f000152eed87",
   "deviceOnline": true,
-  "lastSeenAt": 1791137196304,
-  "mode": "animation",
+  "lastSeenAt": 1791161062757,
+  "mode": "normal",
   "requestedMode": "animation",
   "modeRequestId": 1791136505002,
   "localIp": "192.168.29.243",
   "drawPad": {
     "active": false,
     "clients": 0,
-    "eventId": 18,
-    "event": "disconnected"
+    "eventId": 0,
+    "event": ""
   }
 }
