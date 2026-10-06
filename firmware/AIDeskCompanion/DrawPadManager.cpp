@@ -34,6 +34,8 @@ void DrawPadManager::begin() {
   frameMutex = xSemaphoreCreateMutex();
   memset(framebuffer, 0, sizeof(framebuffer));
 
+  wifi.registerSetupRoutes(server); // Wi-Fi setup page/captive portal; AP-only, registered before "/" so it wins on the setup AP
+
   server.on("/", HTTP_GET, [](AsyncWebServerRequest *request) {
     if (!instance) return;
     instance->recordEvent("opened");

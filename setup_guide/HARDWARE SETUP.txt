@@ -1,0 +1,124 @@
+HARDWARE SETUP
+==============
+All pins are defined in: firmware/AIDeskCompanion/Config.h
+
+PARTS
+  1 x ESP32 Dev Module (ESP32-WROOM)
+  1 x SSD1306 OLED 128x64 (I2C)
+  1 x MPU6050 (GY-521 board)
+  1 x Push button
+  1 x Active buzzer
+  3 x LEDs (red, white, green)
+  3 x 220 ohm resistors (one per LED)
+  2 x SG90 micro servos (ears)
+  USB cable, jumper wires
+
+
+PIN TABLE
+  GPIO 21  OLED SDA + MPU6050 SDA   (I2C data, shared)
+  GPIO 22  OLED SCL + MPU6050 SCL   (I2C clock, shared)
+  GPIO 19  Push button              (input, other leg to GND)
+  GPIO 18  Active buzzer            (output)
+  GPIO 25  Left LED (red)           (output, through 220 ohm)
+  GPIO 26  Center LED (white)       (output, through 220 ohm)
+  GPIO 27  Right LED (green)        (output, through 220 ohm)
+  GPIO 32  Left servo signal        (left ear)
+  GPIO 33  Right servo signal       (right ear)
+  GPIO 23  MPU6050 INT              (input)
+
+  I2C addresses: OLED = 0x3C, MPU6050 = 0x68
+
+
+WIRING, PART BY PART
+
+OLED (SSD1306)
+  VCC -> 3.3V
+  GND -> GND
+  SDA -> GPIO21
+  SCL -> GPIO22
+
+MPU6050 (GY-521)
+  VCC -> 3.3V
+  GND -> GND
+  SDA -> GPIO21 (same wire as OLED SDA)
+  SCL -> GPIO22 (same wire as OLED SCL)
+  AD0 -> GND   (this makes the address 0x68)
+  INT -> GPIO23
+  XDA, XCL -> not connected
+
+BUTTON
+  GPIO19 --- button --- GND
+  (no outside resistor needed; the code uses the internal pull-up)
+
+BUZZER (active type)
+  GPIO18 -> buzzer signal
+  GND    -> buzzer GND
+
+LEDS (each LED needs its own resistor)
+  GPIO25 -- 220 ohm --> Left LED (+)     LED (-) -> GND
+  GPIO26 -- 220 ohm --> Center LED (+)   LED (-) -> GND
+  GPIO27 -- 220 ohm --> Right LED (+)    LED (-) -> GND
+
+SERVOS (EARS)
+  Left ear  signal -> GPIO32
+  Right ear signal -> GPIO33
+  Servo power and ground from a stable supply. Servo GND MUST connect to ESP32 GND.
+
+
+POWER RULES
+- Power the ESP32 from USB during setup. A regulated 5V source can go to the 5V/VIN pin.
+- NEVER put 5V into the 3.3V pin.
+- Join ALL grounds together.
+- If the ESP32 restarts or the ears shake when servos move, the servos need a stronger, stable supply.
+
+
+BUTTON FUNCTIONS (one button, GPIO19)
+  1 short press        Next screen
+  2 quick presses      LED mode ON/OFF
+  3 quick presses      Ear mode ON/OFF
+  4 quick presses      Animation Display Mode ON/OFF
+  Long press (~0.6 s)  Lock / unlock the current screen
+
+  - When locked: screens stop changing; short/double/triple only beep; long press unlocks.
+    You also cannot ENTER Animation Display Mode while locked.
+  - Inside Animation Display Mode: short and long press do nothing; double/triple still work.
+  - While Draw Pad is open: short, long and the 4-press shortcut are ignored.
+  - After about 1.5 minutes with no press, the face sleeps. Press or move the device to wake it.
+
+
+ESP32 FIRMWARE UPLOAD (Arduino IDE)
+  1. Install board package: "esp32 by Espressif Systems" (Boards Manager)
+       Extra URL: https://espressif.github.io/arduino-esp32/package_esp32_index.json
+  2. Install libraries (Tools -> Manage Libraries):
+       Adafruit GFX Library
+       Adafruit SSD1306
+       ArduinoJson   (version 7)
+       ESP32Servo
+       ESP Async WebServer
+       Async TCP
+       WebSockets (by Markus Sattler)
+  3. Run  npm run gen:firmware  inside cloud/  (creates firmware/AIDeskCompanion/secrets.h)
+  4. Open firmware/AIDeskCompanion/AIDeskCompanion.ino
+  5. Tools -> Board: ESP32 Dev Module
+  6. Tools -> Partition Scheme: Huge APP (3MB No OTA/1MB SPIFFS)
+  7. Tools -> Port: your ESP32
+  8. Click Upload (if stuck on "Connecting...", hold the BOOT button)
+  9. Tools -> Serial Monitor -> 115200 baud
+
+
+HOW TO CHANGE A PIN (Config.h)
+  Button       BUTTON_PIN
+  Buzzer       BUZZER_PIN
+  OLED / MPU   OLED_SDA_PIN, OLED_SCL_PIN
+  LEDs         LED_LEFT_PIN, LED_CENTER_PIN, LED_RIGHT_PIN
+  Servos       EAR_LEFT_SERVO_PIN, EAR_RIGHT_SERVO_PIN
+  MPU INT      MPU6050_INT_PIN
+  Rewire to match, then upload the firmware again. Keep every pin different.
+
+
+HARDWARE PROBLEMS
+- OLED black, Serial says "SSD1306 allocation failed" -> check 21, 22, 3.3V, GND; address 0x3C
+- Status screen shows "MPU: ERROR"                     -> check MPU wires; AD0 must go to GND
+- Ears twitch / ESP32 restarts                         -> weak servo power; join the grounds
+- No buzzer sound                                      -> use an ACTIVE buzzer on GPIO18
+- Button does nothing                                  -> one leg to GPIO19, other leg to GND

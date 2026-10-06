@@ -1,0 +1,70 @@
+GITHUB SETUP
+============
+GitHub is used for 3 things:
+  1. Stores the project code
+  2. Stores the animations and device state (the Worker saves files here - there is no database)
+  3. Hosts the website (GitHub Pages)
+
+The WHOLE project folder is ONE repository.
+
+
+STEP 1 - Create the repository
+  1. github.com -> New repository
+  2. Name it, for example:  ai-desk-animation-cloud
+  3. Make it PUBLIC (free GitHub Pages needs public)
+  4. Do NOT add a README or any file. Leave it empty.
+
+STEP 2 - Connect your project folder to it
+  Run in the project ROOT folder (the one that has cloud/ and firmware/):
+    git remote -v
+    git remote set-url origin https://github.com/YOUR_USER/YOUR_REPO.git
+  (If the folder has no git yet:
+    git init
+    git branch -M main
+    git remote add origin https://github.com/YOUR_USER/YOUR_REPO.git )
+
+STEP 3 - Create the token the Worker uses
+  1. GitHub -> Settings -> Developer settings -> Personal access tokens -> Fine-grained tokens
+  2. Generate new token
+  3. Repository access: ONLY select your repository
+  4. Permissions -> Repository permissions -> Contents: Read and write
+  5. Generate, and copy the token right away (GitHub shows it only once)
+  6. Paste it into cloud/.env as GITHUB_TOKEN
+  Also fill in cloud/.env:
+    GITHUB_OWNER  = your GitHub username
+    GITHUB_REPO   = your repository name
+    GITHUB_BRANCH = main
+
+STEP 4 - Check for secrets, then push
+  cd cloud
+  npm run check:secrets        (must say "No secrets found in tracked files")
+  cd ..
+  git add .
+  git commit -m "Initial commit"
+  git push -u origin main
+  (GitHub asks you to sign in. Use the browser login, or a personal access token as the password.)
+
+STEP 5 - Turn on the website (GitHub Pages)
+  The project uses a workflow file: .github/workflows/pages.yml
+  It copies the cloud/ folder and publishes it every time you push to main.
+  1. Repo -> Settings -> Pages
+  2. Source: choose  GitHub Actions   (NOT "Deploy from a branch")
+  3. Push to main, then open the Actions tab and wait for a green tick
+  4. Your website:  https://YOUR_USER.github.io/YOUR_REPO/
+
+NOTES
+- The Worker also saves files into main (animations/, animations.json, device/state.json).
+  Each save can start the Pages workflow, so many green runs in the Actions tab are normal.
+- Do not edit the animations/ folder by hand. Upload .ino files on the website instead.
+- These files are git-ignored on purpose. NEVER commit them:
+    cloud/.env
+    cloud/.dev.vars
+    firmware/AIDeskCompanion/secrets.h
+    cloud/esp32/animation_client/secrets.h
+- If a token is ever shared by mistake: make a NEW token on GitHub, put it in cloud/.env,
+  and run  npm run sync:secrets  (inside cloud/).
+
+COMMON GITHUB PROBLEMS
+- Website not updating      -> wait for green Actions run; check Pages Source = GitHub Actions
+- Upload on website fails   -> check GITHUB_TOKEN permission (Contents: Read and write) and repo name
+- check:secrets shows FAIL  -> do not push; remove the secret from the file it names

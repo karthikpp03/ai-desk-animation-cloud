@@ -1,0 +1,18 @@
+Install all these before running
+
+Tools → Board → Boards Manager
+esp32 by Espressif Systems
+
+
+Arduino IDE → Tools → Manage Libraries:
+Adafruit GFX Library
+Adafruit SSD1306
+ArduinoJson
+ESP32Servo
+ESP Async WebServer
+Async TCP@3.5.0
+WebSockets by Markus Sattler
+
+
+before compling 
+Tools → Partition Scheme --- Huge APP (3MB No OTA/1MB SPIFFS)

@@ -1,0 +1,95 @@
+OVERALL RUN COMMANDS (first-time setup, in order)
+=================================================
+Rule: type each secret ONCE, into cloud/.env. Never share real values.
+Run npm commands INSIDE the cloud/ folder.
+
+0) TOOLS NEEDED
+   Node.js 20+ (check: node -v), git, Arduino IDE 2.x
+
+1) INSTALL
+   cd cloud
+   npm install
+
+2) CREATE .env AND FILL IT
+   cp .env.example .env
+   openssl rand -hex 32          (run twice: one for ADMIN_TOKEN, one for DEVICE_TOKEN)
+   nano .env                     (fill everything except API_BASE for now)
+
+   Names in .env:
+     ADMIN_TOKEN, DEVICE_TOKEN, GITHUB_TOKEN, OPENAI_API_KEY (optional),
+     GITHUB_OWNER, GITHUB_REPO, GITHUB_BRANCH, API_BASE,
+     HOME_WIFI_SSID, HOME_WIFI_PASSWORD, HOTSPOT_WIFI_SSID, HOTSPOT_WIFI_PASSWORD,
+     WEATHER_API_KEY (optional), WEATHER_LOCATION
+
+3) CHECK SECRETS AND PUSH TO GITHUB
+   npm run check:secrets         (must say: No secrets found in tracked files)
+   cd ..                         (project root)
+   git remote set-url origin https://github.com/YOUR_USER/YOUR_REPO.git
+   git add .
+   git commit -m "Initial commit"
+   git push -u origin main
+   Then GitHub -> Settings -> Pages -> Source: GitHub Actions
+
+4) DEPLOY THE WORKER
+   cd cloud
+   npx wrangler login
+   npm run deploy                (copy the printed Worker address into .env as API_BASE)
+   npm run sync:secrets -- --dry-run
+   npm run sync:secrets
+   npm run test:api
+
+5) POINT THE WEBSITE AT YOUR WORKER
+   Edit the API_BASE line in:
+     cloud/app.js          (line 4)
+     cloud/drawpad.html    (around line 203)
+   Then from the project root:
+     git add .
+     git commit -m "Set Worker address"
+     git push
+
+6) MAKE THE ESP32 SECRETS FILE
+   cd cloud
+   npm run gen:firmware          (writes firmware/AIDeskCompanion/secrets.h)
+
+7) UPLOAD THE FIRMWARE (Arduino IDE)
+   Open firmware/AIDeskCompanion/AIDeskCompanion.ino
+   Board: ESP32 Dev Module
+   Partition Scheme: Huge APP (3MB No OTA/1MB SPIFFS)
+   Pick the port, click Upload, open Serial Monitor at 115200
+
+8) TEST
+   - OLED shows boot animation, then the face
+   - Website (https://YOUR_USER.github.io/YOUR_REPO/) shows "ESP32 Online"
+   - Upload cloud/sample-eye.ino on the website
+   - Press the button 4 times (or click Mode Change), then click Play
+
+
+DAILY / REPEAT COMMANDS (inside cloud/)
+   npm run deploy                 after changing Worker code or wrangler.toml
+   npm run sync:secrets           after changing a secret in .env
+   npm run gen:firmware           after changing .env (then upload firmware again)
+   npm run check:secrets          before every git push
+   npm run test:api               check the deployed Worker
+   npm run test:parser            test the .ino reader
+   npm run test:worker            test the Worker locally
+   npm run gen:devvars            make .dev.vars for local testing
+   npm run dev                    run the Worker on your computer
+
+RUN THE WEBSITE ON YOUR COMPUTER (no build step needed)
+   cd cloud
+   python3 -m http.server 8000
+   Open http://localhost:8000
+   (It still talks to the Worker address written in app.js.)
+
+PUBLISH WEBSITE CHANGES
+   git add .
+   git commit -m "message"
+   git push
+   (GitHub Actions publishes cloud/ automatically. Watch the Actions tab.)
+
+BEFORE SHARING THE FOLDER, DELETE:
+   cloud/.env
+   cloud/.dev.vars
+   firmware/AIDeskCompanion/secrets.h
+   cloud/esp32/animation_client/secrets.h
+   firmware/AIDeskCompanion.zip   (it contains a secrets.h inside)

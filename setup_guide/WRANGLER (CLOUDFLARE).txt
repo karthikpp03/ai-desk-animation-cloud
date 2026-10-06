@@ -1,0 +1,77 @@
+WRANGLER (CLOUDFLARE) SETUP
+===========================
+Wrangler is Cloudflare's command-line tool. It deploys the Worker (the backend).
+It is installed automatically by "npm install" inside the cloud/ folder.
+
+IMPORTANT: run every command below INSIDE the cloud/ folder.
+
+WHAT THE WORKER DOES
+- Receives uploaded .ino files and converts them
+- Saves animations and device state into your GitHub repo
+- Checks the DEVICE_TOKEN from the ESP32
+- Relays the Draw Pad between browser and ESP32
+
+WORKER SETTINGS (cloud/wrangler.toml)
+- Worker name : ai-desk-animation-api
+- Entry file  : worker/index.js
+- Plain values: OPENAI_MODEL, STORE_ORIGINAL_INO ("false" = original .ino is not kept)
+- Durable Object DRAW_PAD_RELAY (runs the Draw Pad). Created automatically on first deploy.
+
+
+STEP 1 - Install
+  cd cloud
+  npm install
+
+STEP 2 - Fill cloud/.env first
+  cp .env.example .env
+  Fill ADMIN_TOKEN, DEVICE_TOKEN, GITHUB_TOKEN, GITHUB_OWNER, GITHUB_REPO, GITHUB_BRANCH
+  (make tokens with:  openssl rand -hex 32   - run it twice, two different values for admin and device token)
+
+STEP 3 - Log in to Cloudflare
+  npx wrangler login
+  (a browser opens - click Allow)
+
+STEP 4 - Deploy the Worker
+  npm run deploy
+  - The first time it may ask you to choose a workers.dev name.
+  - It prints your Worker address:
+      https://ai-desk-animation-api.<your-name>.workers.dev
+  - Copy it into cloud/.env as API_BASE.
+
+STEP 5 - Upload the secrets to Cloudflare
+  npm run sync:secrets -- --dry-run     (only shows the NAMES that will be uploaded)
+  npm run sync:secrets                  (uploads them; values are never printed)
+
+  Uploaded names: ADMIN_TOKEN, DEVICE_TOKEN, GITHUB_TOKEN, OPENAI_API_KEY (only if set),
+                  GITHUB_OWNER, GITHUB_REPO, GITHUB_BRANCH
+
+STEP 6 - Check it works
+  npm run test:api
+  (expects 401 without a token and 200 with the right token)
+
+
+AFTER YOU CHANGE A SECRET
+  1. Edit cloud/.env
+  2. npm run sync:secrets
+  3. If DEVICE_TOKEN changed: also run  npm run gen:firmware  and upload the ESP32 firmware again.
+     (The ESP32 and the Worker must have the SAME device token.)
+
+AFTER YOU CHANGE WORKER CODE OR wrangler.toml
+  npm run deploy
+
+OTHER COMMANDS
+  npx wrangler login            log in again
+  npm run gen:devvars           make cloud/.dev.vars from .env (for local testing)
+  npm run dev                   run the Worker on your computer
+  npm run test:parser           test the .ino reader
+  npm run test:worker           test the Worker locally
+
+COMMON WRANGLER PROBLEMS
+- "package.json not found"      -> you are not inside cloud/
+- "Missing in .env: ..."        -> fill that line in cloud/.env
+- 401 Unauthorized from Worker  -> DEVICE_TOKEN differs between ESP32 and Cloudflare.
+                                   Run sync:secrets, then gen:firmware, then re-upload firmware.
+- GitHub errors (401/403/404)   -> check GITHUB_TOKEN (needs Contents: Read and write on your repo),
+                                   GITHUB_OWNER, GITHUB_REPO, GITHUB_BRANCH. Then run sync:secrets.
+
+NEVER share cloud/.env or any token.
