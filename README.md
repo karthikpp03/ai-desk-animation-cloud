@@ -1,10 +1,12 @@
 # AI Desk Companion + Animation Cloud
 
+Please refer the setup_guide folder for the commands if you dont have patience to read the readme file
+
 A small desk pet built on an **ESP32**. It has a living face on a 128x64 OLED screen, 3 LEDs, 2 servo ears, a buzzer, a motion sensor and one button.
 
 You can also **upload your own animations from a website** and play them on the OLED, or **draw on the OLED from your phone or laptop** (Draw Pad).
 
-This file explains everything: how it works, how to set it up from zero, what every pin and button does, and how to change things. Everything here was checked against the real code.
+This file explains everything: how it works, how to set it up from zero, what every pin and button does, and how to change things. Everything here was checked against the real code. 
 
 > **Before you share this folder with anyone:** delete the secret files listed in [Section 17](#17-before-you-share-this-folder). They contain real passwords and tokens.
 
