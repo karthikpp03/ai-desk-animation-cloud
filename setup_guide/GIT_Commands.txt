@@ -1,0 +1,17 @@
+If any Errors occurs during this procees please ask any AI models like chatgpt or claude 
+whenever your working in git please turn off the node Mcu ESP 32D board 
+
+
+#After the Major or Minor Changes 
+
+git add .
+
+git commit -m "enter what u have chnaged here"
+
+#After commit pull the origin data from the workers 
+
+git pull --rebase origin main
+
+#Once pulled from the git 
+
+git push origin main
